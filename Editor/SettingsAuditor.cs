@@ -30,6 +30,12 @@ namespace Unity.ProjectAuditor.Editor
         public void LoadDatabase(string path)
         {
              m_ProblemDescriptors = ProblemDescriptorHelper.LoadProblemDescriptors( path, "ProjectSettings");
+             foreach (var descriptor in m_ProblemDescriptors)
+             {
+                 // bind evaluator if necessary
+                 if (string.IsNullOrEmpty(descriptor.value))
+                     descriptor.customEvaluator = m_Helpers.GetCustomEvaluator(descriptor);
+             }             
         }
 
         public void Audit(ProjectReport projectReport)
@@ -56,7 +62,7 @@ namespace Unity.ProjectAuditor.Editor
         
         private void SearchAndEval(ProblemDescriptor descriptor, ProjectReport projectReport)
         {
-            if (string.IsNullOrEmpty(descriptor.customevaluator))
+            if (descriptor.customEvaluator == null)
             {
                 // do we actually need to look in all assemblies? Maybe we can find a way to only evaluate on the right assembly
                 foreach (var assembly in m_Assemblies)
@@ -80,16 +86,9 @@ namespace Unity.ProjectAuditor.Editor
                     }
                 }
             }
-            else
+            else if (descriptor.customEvaluator())
             {
-                Type helperType = m_Helpers.GetType();
-                MethodInfo theMethod = helperType.GetMethod(descriptor.customevaluator);
-                bool isIssue = (bool)theMethod.Invoke(m_Helpers, null);
-
-                if (isIssue)
-                {
-                    AddIssue(descriptor, projectReport);
-                }
+                AddIssue(descriptor, projectReport);
             }
         }
     }

@@ -10,7 +10,7 @@ namespace Unity.ProjectAuditor.Editor
         public string type;
         public string method;
         public string value;
-        public string customevaluator;
+        public Func<bool> customEvaluator;
         public string area;
         public string problem;
         public string solution;

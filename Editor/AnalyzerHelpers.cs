@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -201,6 +203,31 @@ namespace Unity.ProjectAuditor.Editor
             }
 
             return false;
+        }
+
+        private Dictionary<int, Func<bool>> m_Evaluators = new Dictionary<int, Func<bool>>();
+
+        public AnalyzerHelpers()
+        {
+            m_Evaluators.Add(201002, PlayerSettingsAccelerometerFrequency);
+            m_Evaluators.Add(201003, PlayerSettingsArchitecture_iOS);
+            m_Evaluators.Add(201004, PlayerSettingsArchitecture_Android);
+            m_Evaluators.Add(201005, PlayerSettingsGraphicsAPIs_iOS_OpenGLESAndMetal);
+            m_Evaluators.Add(201006, PlayerSettingsGraphicsAPIs_iOS_OpenGLES);
+            m_Evaluators.Add(201013, PhysicsLayerCollisionMatrix);
+            m_Evaluators.Add(201015, Physics2DLayerCollisionMatrix);
+            m_Evaluators.Add(201018, QualityUsingDefaultSettings);
+            m_Evaluators.Add(201019, QualityUsingLowQualityTextures);
+            m_Evaluators.Add(201020, QualityDefaultAsyncUploadTimeSlice);
+            m_Evaluators.Add(201021, QualityDefaultAsyncUploadBufferSize);
+            m_Evaluators.Add(201022, GraphicsMixedStandardShaderQuality);
+            m_Evaluators.Add(201023, GraphicsUsingForwardRendering);
+            m_Evaluators.Add(201024, GraphicsUsingDeferredRendering);
+        }
+
+        public Func<bool> GetCustomEvaluator(ProblemDescriptor descriptor)
+        {
+            return m_Evaluators[descriptor.id];
         }
     }
 }
