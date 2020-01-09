@@ -103,6 +103,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             
             var callerNode = new CallTreeNode(caller);
 
+            bool perfCriticalContext = MonoBehaviourAnalysis.IsPerformanceCriticalContext(caller.DeclaringType, caller);
+            
             foreach (var inst in caller.Body.Instructions.Where(i => m_OpCodes.Contains(i.OpCode)))
             {
                 //var msg = string.Empty;
@@ -122,7 +124,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     
                 if (inst.OpCode == OpCodes.Call || inst.OpCode == OpCodes.Callvirt)
                 {
-                    callCrawler.Add(caller, (MethodReference) inst.Operand, location);
+                    callCrawler.Add(caller, (MethodReference) inst.Operand, location, perfCriticalContext);
                 }
 
                 foreach (var analyzer in m_InstructionAnalyzers)
