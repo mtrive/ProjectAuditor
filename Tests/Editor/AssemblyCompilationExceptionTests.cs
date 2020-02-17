@@ -42,6 +42,7 @@ class MyClass {
                     compilationHelper.Compile();
                 }
             }
+            catch (AssemblyCompilationException)
             {
                 exceptionThrown = true;
             }
