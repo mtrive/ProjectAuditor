@@ -15,10 +15,10 @@ namespace Unity.ProjectAuditor.Editor.Utils
 
         public IEnumerable<string> Compile()
         {
+            if (EditorUtility.scriptCompilationFailed)
+                throw new AssemblyCompilationException();
 #if UNITY_2018_2_OR_NEWER
             m_OutputFolder = FileUtil.GetUniqueTempPathInProject();
-            if (Directory.Exists(m_OutputFolder))
-                Directory.Delete(m_OutputFolder, true);
             
             CompilationPipeline.assemblyCompilationFinished += OnAssemblyCompilationFinished;
             
@@ -32,7 +32,7 @@ namespace Unity.ProjectAuditor.Editor.Utils
 
             if (!m_Success)
                 throw new AssemblyCompilationException();
-                
+
             return compilationResult.assemblies.Select(assembly => Path.Combine(m_OutputFolder, assembly));
 #else
             // fallback to CompilationPipeline assemblies 
