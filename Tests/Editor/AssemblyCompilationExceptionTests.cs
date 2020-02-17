@@ -1,6 +1,9 @@
+using System;
 using NUnit.Framework;
 using Unity.ProjectAuditor.Editor;
 using Unity.ProjectAuditor.Editor.Utils;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace UnityEditor.ProjectAuditor.EditorTests
 {
@@ -29,6 +32,8 @@ class MyClass {
         [Test]
         public void ExceptionIsThrownOnCompilationError()
         {
+            LogAssert.ignoreFailingMessages = true;
+
             var exceptionThrown = false;
             try
             {
@@ -37,10 +42,10 @@ class MyClass {
                     compilationHelper.Compile();
                 }
             }
-            catch (AssemblyCompilationException)
             {
                 exceptionThrown = true;
             }
+            LogAssert.ignoreFailingMessages = false;
             
             Assert.True(exceptionThrown);
         }
