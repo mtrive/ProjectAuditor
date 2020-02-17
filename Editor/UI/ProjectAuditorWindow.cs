@@ -259,6 +259,7 @@ In addition, it is possible to filter issues by area (CPU/Memory/etc...) or asse
             catch (AssemblyCompilationException e)
             {
                 Debug.LogError(e);
+                m_ValidReport = false;
             }
             
             m_IssueTables.Clear();
