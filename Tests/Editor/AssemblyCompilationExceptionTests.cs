@@ -30,6 +30,7 @@ class MyClass {
         }
         
         [Test]
+        [ExplicitAttribute]
         public void ExceptionIsThrownOnCompilationError()
         {
             LogAssert.ignoreFailingMessages = true;
