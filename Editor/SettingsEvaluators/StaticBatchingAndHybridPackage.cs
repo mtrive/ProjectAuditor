@@ -14,10 +14,10 @@ namespace Packages.ProjectAuditor.Editor.SettingsEvaluators
         private static ProblemDescriptor descriptor = new ProblemDescriptor
         {
             id = 202000,
-            description = "Static-batching is enabled",
+            description = "Static-batching is enabled, but is incompatible with hybrid rendering",
             area = "CPU",
-            problem = "Static-batching is enabled and the package com.unity.rendering.hybrid is installed",
-            solution = "Disable static-batching"
+            problem = "Static-batching is enabled and the package com.unity.rendering.hybrid is installed. Static batching is incompatible with the batching techniques used in the Hybrid Renderer and Scriptable Render Pipeline, and will result in poor rendering performance and excessive memory use.",
+            solution = "Disable static-batching in Player Settings"
         }; 
 
         public StaticBatchingAndHybridPackage(SettingsAuditor auditor)
