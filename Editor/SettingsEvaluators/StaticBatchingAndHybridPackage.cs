@@ -58,7 +58,7 @@ namespace Packages.ProjectAuditor.Editor.SettingsEvaluators
                 dynamicBatching    
             };
  
-            method.Invoke(null, args); ;
+            method.Invoke(null, args);
             return (int)args[1] > 0;
         }
     }
