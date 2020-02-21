@@ -1,7 +1,5 @@
-using System.Collections.Generic;
-using Unity.ProjectAuditor.Editor;
 
-namespace Packages.ProjectAuditor.Editor.SettingsEvaluators
+namespace Unity.ProjectAuditor.Editor.SettingsAnalyzers
 {
     public interface ISettingsAnalyzer
     {

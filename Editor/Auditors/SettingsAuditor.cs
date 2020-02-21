@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Packages.ProjectAuditor.Editor.SettingsEvaluators;
+using Unity.ProjectAuditor.Editor.SettingsAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor.Macros;
-using UnityEditor.PackageManager;
-using UnityEngine;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
 {

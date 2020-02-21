@@ -6,7 +6,7 @@ using Unity.ProjectAuditor.Editor.Auditors;
 using UnityEditor;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace Packages.ProjectAuditor.Editor.SettingsEvaluators
+namespace Unity.ProjectAuditor.Editor.SettingsAnalyzers
 {
     [Unity.ProjectAuditor.Editor.SettingsAnalyzers.Attribute]
     public class StaticBatchingAndHybridPackage : ISettingsAnalyzer
