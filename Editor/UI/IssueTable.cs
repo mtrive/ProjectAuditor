@@ -125,7 +125,7 @@ namespace Unity.ProjectAuditor.Editor
             get
             {
                 return m_perfCriticalIcon ??
-                       (m_perfCriticalIcon = EditorGUIUtility.FindTexture("console.warnicon"));
+                       (m_perfCriticalIcon = EditorGUIUtility.FindTexture("console.warnicon.sml"));
             }
         }
         

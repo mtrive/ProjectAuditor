@@ -67,8 +67,8 @@ namespace Unity.ProjectAuditor.Editor
                         minWidth = 100;
                         break;
                     case IssueTable.Column.Priority :
-                        width = 20;
-                        minWidth = 20;
+                        width = 22;
+                        minWidth = 22;
                         break;
                     case IssueTable.Column.Area :
                         width = 60;
