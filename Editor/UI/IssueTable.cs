@@ -119,15 +119,7 @@ namespace Unity.ProjectAuditor.Editor
 
         private readonly bool m_GroupByDescription;
 
-        static Texture2D m_perfCriticalIcon;
-        private static Texture2D perfCriticalIcon
-        {
-            get
-            {
-                return m_perfCriticalIcon ??
-                       (m_perfCriticalIcon = EditorGUIUtility.FindTexture("console.warnicon.sml"));
-            }
-        }
+        private static readonly string PerfCriticalIconName = "console.warnicon";
         
         public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader, ProjectIssue[] issues,
             bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state, multicolumnHeader)
@@ -261,7 +253,8 @@ namespace Unity.ProjectAuditor.Editor
                 {
                     case Column.Priority:
                         if (issue.isPerfCriticalContext)
-                            GUI.DrawTexture(cellRect, perfCriticalIcon, ScaleMode.ScaleToFit);
+                            EditorGUI.LabelField(cellRect,
+                                EditorGUIUtility.TrTextContent( "Performance Critical Context", "Performance Critical Context", PerfCriticalIconName));
                         break;
                     case Column.Area:
                         if (!m_GroupByDescription)
