@@ -20,7 +20,7 @@ class ObjectAllocation
     {
         // explicit object allocation
         return new ObjectAllocation();
-	}
+    }
 }
 ");
 
