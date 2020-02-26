@@ -16,10 +16,10 @@ namespace UnityEditor.ProjectAuditor.EditorTests
 			m_ScriptResourceObjectAllocation = new ScriptResource("ObjectAllocation.cs", @"
 class ObjectAllocation
 {
-	static ObjectAllocation Dummy()
-	{
-		// explicit object allocation
-		return new ObjectAllocation();
+    static ObjectAllocation Dummy()
+    {
+        // explicit object allocation
+        return new ObjectAllocation();
 	}
 }
 ");
@@ -29,9 +29,9 @@ class ArrayAllocation
 {
     int[] array;
     void Dummy()
-	{
-		// explicit array allocation
-		array = new int[1];
+    {
+        // explicit array allocation
+        array = new int[1];
     }
 }
 ");
@@ -40,12 +40,12 @@ class ArrayAllocation
 class ParamsArrayAllocation
 {
     void DummyImpl(params object[] args)
-	{
-	}
+    {
+    }
     
     void Dummy(object C)
-	{
-		// implicit array allocation
+    {
+        // implicit array allocation
         DummyImpl(null, null);
     }
 }
