@@ -8,6 +8,7 @@ namespace UnityEditor.ProjectAuditor.EditorTests
 	{
 		private ScriptResource m_ScriptResourceObjectAllocation;
 		private ScriptResource m_ScriptResourceArrayAllocation;
+		private ScriptResource m_ScriptResourceParamsArrayAllocation;
 
 		[OneTimeSetUp]
 		public void SetUp()
@@ -15,21 +16,40 @@ namespace UnityEditor.ProjectAuditor.EditorTests
 			m_ScriptResourceObjectAllocation = new ScriptResource("ObjectAllocation.cs", @"
 class ObjectAllocation
 {
-	static ObjectAllocation Create()
+	static ObjectAllocation Dummy()
 	{
+		// explicit object allocation
 		return new ObjectAllocation();
 	}
 }
 ");
 
 			m_ScriptResourceArrayAllocation = new ScriptResource("ArrayAllocation.cs", @"
-class ArrayAllocation {
+class ArrayAllocation
+{
     int[] array;
-    public void Init() {
-       array = new int[1];
+    void Dummy()
+	{
+		// explicit array allocation
+		array = new int[1];
     }
 }
 ");
+
+			m_ScriptResourceParamsArrayAllocation = new ScriptResource("ParamsArrayAllocation.cs", @"
+class ParamsArrayAllocation
+{
+    void DummyImpl(params object[] args)
+	{
+	}
+    
+    void Dummy(object C)
+	{
+		// implicit array allocation
+        DummyImpl(null, null);
+    }
+}
+");			
 		}
 
 		[OneTimeTearDown]
@@ -63,6 +83,19 @@ class ArrayAllocation {
 
 			Assert.NotNull(allocationIssue);
 			Assert.True(allocationIssue.description.Equals("'Int32' array allocation"));
+			Assert.AreEqual(IssueCategory.ApiCalls, allocationIssue.category);
+		}
+		
+		[Test]
+		public void ParamsArrayAllocationIsFound()
+		{
+			var issues = ScriptIssueTestHelper.AnalyzeAndFindScriptIssues(m_ScriptResourceParamsArrayAllocation);
+			Assert.AreEqual(1, issues.Count());
+
+			var allocationIssue = issues.FirstOrDefault();
+
+			Assert.NotNull(allocationIssue);
+			Assert.True(allocationIssue.description.Equals("'Object' array allocation"));
 			Assert.AreEqual(IssueCategory.ApiCalls, allocationIssue.category);
 		}
 	}
