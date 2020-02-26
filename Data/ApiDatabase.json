@@ -2239,6 +2239,16 @@
             "area": "Memory",
             "problem": "The GameObject.tag property allocates managed memory.",
             "solution": "Try to avoid getting this property in frequently-updated code. Prefer using GameObject.CompareTag() instead, as this does not result in managed allocations."
+        },
+        {
+            "id": 101226,
+            "type": "System.String",
+            "method": "Concat",
+            "value": "",
+            "customevaluator": "",
+            "area": "Memory",
+            "problem": "String concatenation operations allocates managed memory",
+            "solution": "Try to avoid concatenating strings in frequently-updated code. Prefer using a StringBuilder instead, as this minimizes managed allocations."
         }
     ]
 }
