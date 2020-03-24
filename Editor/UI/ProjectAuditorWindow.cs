@@ -6,6 +6,7 @@ using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Unity.ProjectAuditor.Editor
 {
@@ -180,16 +181,19 @@ namespace Unity.ProjectAuditor.Editor
 
         private void Analyze()
         {
+            Profiler.BeginSample("ProjectAuditorWindow.Analyze");
             try
             {
                 m_ProjectReport = m_ProjectAuditor.Audit(new ProgressBarDisplay());
 
+                Profiler.BeginSample("ProjectAuditorWindow.Analyze.UpdateAssemblyNames");
                 // update list of assembly names
                 var scriptIssues = m_ProjectReport.GetIssues(IssueCategory.ApiCalls);
                 m_AssemblyNames = scriptIssues.Select(i => i.assembly).Distinct().OrderBy(str => str).ToArray();
                 UpdateAssemblySelection();
 
                 m_ValidReport = true;
+                Profiler.EndSample();
             }
             catch (AssemblyCompilationException e)
             {
@@ -198,16 +202,25 @@ namespace Unity.ProjectAuditor.Editor
             }
 
             RefreshDisplay();
+            
+            Profiler.EndSample();
         }
 
         private void RefreshDisplay()
         {
+            Profiler.BeginSample("ProjectAuditorWindow.RefreshDisplay");
+
             if (!IsAnalysisValid())
+            {
+                Profiler.EndSample();
                 return;
+            }
 
             foreach (var view in m_AnalysisViews) view.CreateTable(m_ProjectReport, new TreeViewState());
 
             m_ActiveIssueTable.Reload();
+            
+            Profiler.EndSample();
         }
 
         private void Reload()

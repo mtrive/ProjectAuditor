@@ -9,6 +9,8 @@ using Unity.ProjectAuditor.Editor.CodeAnalysis;
 using Unity.ProjectAuditor.Editor.InstructionAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEngine;
+using UnityEngine.Profiling;
+
 using Attribute = Unity.ProjectAuditor.Editor.InstructionAnalyzers.Attribute;
 #if UNITY_2018_1_OR_NEWER
 
@@ -20,7 +22,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
     {
         private readonly List<IInstructionAnalyzer> m_InstructionAnalyzers = new List<IInstructionAnalyzer>();
         private readonly List<OpCode> m_OpCodes = new List<OpCode>();
-        private string[] m_AssemblyNames;
+        //private string[] m_AssemblyNames;
         private List<ProblemDescriptor> m_ProblemDescriptors;
 
         internal ScriptAuditor(ProjectAuditorConfig config)
@@ -34,12 +36,18 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         public void Audit(ProjectReport projectReport, IProgressBar progressBar = null)
         {
+            Profiler.BeginSample("ScriptAuditor.Audit");
+            
             var callCrawler = new CallCrawler();
 
             using (var compilationHelper = new AssemblyCompilationHelper())
             using (var assemblyResolver = new DefaultAssemblyResolver())
             {
+                Profiler.BeginSample("ScriptAuditor.Audit.Compilation");
+                
                 var compiledAssemblyPaths = compilationHelper.Compile();
+                
+                Profiler.EndSample();
 
                 foreach (var dir in AssemblyHelper.GetPrecompiledAssemblyDirectories())
                     assemblyResolver.AddSearchDirectory(dir);
@@ -54,6 +62,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     progressBar.Initialize("Analyzing Scripts", "Analyzing project scripts",
                         compiledAssemblyPaths.Count());
 
+                Profiler.BeginSample("ScriptAuditor.Audit.Analysis");
+                
                 // Analyse all Player assemblies
                 foreach (var assemblyPath in compiledAssemblyPaths)
                 {
@@ -69,12 +79,16 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
                     AnalyzeAssembly(assemblyPath, assemblyResolver, projectReport, callCrawler);
                 }
+
+                Profiler.EndSample();
             }
 
             if (progressBar != null)
                 progressBar.ClearProgressBar();
 
             callCrawler.BuildCallHierarchies(projectReport, progressBar);
+
+            Profiler.EndSample();
         }
 
         public void LoadDatabase(string path)

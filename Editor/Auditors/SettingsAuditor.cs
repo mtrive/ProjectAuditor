@@ -5,6 +5,9 @@ using System.Reflection;
 using Unity.ProjectAuditor.Editor.SettingsAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor.Macros;
+
+using UnityEngine.Profiling;
+
 using Attribute = Unity.ProjectAuditor.Editor.SettingsAnalyzers.Attribute;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
@@ -69,6 +72,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         public void Audit(ProjectReport projectReport, IProgressBar progressBar = null)
         {
+            Profiler.BeginSample("SettingsAuditor.Audit");
+            
             if (progressBar != null)
                 progressBar.Initialize("Analyzing Settings", "Analyzing project settings", m_ProblemDescriptors.Count);
 
@@ -91,6 +96,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
             if (progressBar != null)
                 progressBar.ClearProgressBar();
+
+            Profiler.EndSample();
         }
 
         private void AddAnalyzer(ISettingsAnalyzer analyzer)

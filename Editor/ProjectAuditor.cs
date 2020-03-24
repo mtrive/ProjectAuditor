@@ -5,6 +5,8 @@ using System.Linq;
 using Unity.ProjectAuditor.Editor.Auditors;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Profiling;
+
 #if UNITY_2018_1_OR_NEWER
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -70,9 +72,11 @@ namespace Unity.ProjectAuditor.Editor
 
         public ProjectReport Audit(IProgressBar progressBar = null)
         {
+            Profiler.BeginSample("ProjectAuditor.Audit");
             var projectReport = new ProjectReport();
             foreach (var auditor in m_Auditors) auditor.Audit(projectReport, progressBar);
 
+            Profiler.EndSample();
             return projectReport;
         }
 
