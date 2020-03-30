@@ -116,6 +116,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         private void AnalyzeAssembly(string assemblyPath, IAssemblyResolver assemblyResolver,
             ProjectReport projectReport, CallCrawler callCrawler)
         {
+            Profiler.BeginSample("AnalyzeAssembly." + Path.GetFileNameWithoutExtension(assemblyPath));
+            
             using (var a = AssemblyDefinition.ReadAssembly(assemblyPath,
                 new ReaderParameters {ReadSymbols = true, AssemblyResolver = assemblyResolver}))
             {
@@ -128,6 +130,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     AnalyzeMethodBody(projectReport, a, methodDefinition, callCrawler);
                 }
             }
+            
+            Profiler.EndSample();
         }
 
         private void AnalyzeMethodBody(ProjectReport projectReport, AssemblyDefinition a, MethodDefinition caller,
