@@ -26,21 +26,25 @@ namespace Unity.ProjectAuditor.Editor
         private readonly ProjectAuditorConfig m_Config;
 
         private readonly bool m_GroupByDescription;
-        private readonly ProjectIssue[] m_Issues;
+        private ProjectIssue[] m_Issues;
         private readonly IIssuesFilter m_IssuesFilter;
 
-        public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader, ProjectIssue[] issues,
+        public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader,
             bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
             multicolumnHeader)
         {
             m_Config = config;
             m_IssuesFilter = issuesFilter;
-            m_Issues = issues;
             m_GroupByDescription = groupByDescription;
             multicolumnHeader.sortingChanged += OnSortingChanged;
             Reload();
         }
 
+        public void SetData(ProjectIssue[] issues)
+        {
+            m_Issues = issues;
+        }
+        
         protected override TreeViewItem BuildRoot()
         {
             // SteveM TODO - Documentation says that BuildRoot should ONLY build the root table item,
@@ -52,6 +56,9 @@ namespace Unity.ProjectAuditor.Editor
             var idForHiddenRoot = -1;
             var depthForHiddenRoot = -1;
             var root = new TreeViewItem(idForHiddenRoot, depthForHiddenRoot, "root");
+
+            if (m_Issues == null)
+                return root;
 
             var filteredIssues = m_Issues.Where(issue => m_IssuesFilter.ShouldDisplay(issue));
             if (m_GroupByDescription)

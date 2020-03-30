@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Unity.ProjectAuditor.Editor.CodeAnalysis;
@@ -10,6 +11,7 @@ using Unity.ProjectAuditor.Editor.InstructionAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEngine;
 using Attribute = Unity.ProjectAuditor.Editor.InstructionAnalyzers.Attribute;
+using ThreadPriority = System.Threading.ThreadPriority;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
 {
@@ -20,6 +22,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         private string[] m_AssemblyNames;
         private List<ProblemDescriptor> m_ProblemDescriptors;
 
+        private Thread m_AssemblyAnalysisThread;
+
         internal ScriptAuditor(ProjectAuditorConfig config)
         {
         }
@@ -29,22 +33,33 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             return m_ProblemDescriptors;
         }
 
-        public void Audit(ProjectReport projectReport, IProgressBar progressBar = null)
+        public void Audit(Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)
         {
-            var callCrawler = new CallCrawler();
-
             using (var compilationHelper = new AssemblyCompilationHelper())
+            {
+                var compiledAssemblyPaths = compilationHelper.Compile(progressBar).Select(Path.GetFullPath);
+               m_AssemblyAnalysisThread = new Thread(() => AnalyzeAssemblies(compiledAssemblyPaths, onNewIssue, onComplete));
+               m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
+               m_AssemblyAnalysisThread.Start();
+//                AnalyzeAssemblies(compiledAssemblyPaths, onNewIssue, progressBar);
+            }
+            //m_AssemblyAnalysisThread.Join();
+        }
+
+        private void AnalyzeAssemblies(IEnumerable<string> compiledAssemblyPaths, Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)
+        {
+            var compiledAssemblyDirectories = compiledAssemblyPaths.Select(Path.GetDirectoryName).Distinct();
+            var callCrawler = new CallCrawler();
+            var issues = new List<ProjectIssue>();
             using (var assemblyResolver = new DefaultAssemblyResolver())
             {
-                var compiledAssemblyPaths = compilationHelper.Compile(progressBar);
-
                 foreach (var dir in AssemblyHelper.GetPrecompiledAssemblyDirectories())
                     assemblyResolver.AddSearchDirectory(dir);
 
                 foreach (var dir in AssemblyHelper.GetPrecompiledEngineAssemblyDirectories())
                     assemblyResolver.AddSearchDirectory(dir);
 
-                foreach (var dir in compilationHelper.GetCompiledAssemblyDirectories())
+                foreach (var dir in compiledAssemblyDirectories)
                     assemblyResolver.AddSearchDirectory(dir);
 
                 if (progressBar != null)
@@ -64,14 +79,21 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                         continue;
                     }
 
-                    AnalyzeAssembly(assemblyPath, assemblyResolver, projectReport, callCrawler);
+                    AnalyzeAssembly(assemblyPath, assemblyResolver, callCrawler, (issue) =>
+                    {
+                        issues.Add(issue);
+                        onNewIssue(issue);
+              //          Thread.Sleep(20);
+                    });
                 }
             }
 
             if (progressBar != null)
                 progressBar.ClearProgressBar();
 
-            callCrawler.BuildCallHierarchies(projectReport, progressBar);
+            callCrawler.BuildCallHierarchies(issues, progressBar);
+
+            onComplete();
         }
 
         public void LoadDatabase(string path)
@@ -96,25 +118,24 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             m_ProblemDescriptors.Add(descriptor);
         }
 
-        private void AnalyzeAssembly(string assemblyPath, IAssemblyResolver assemblyResolver,
-            ProjectReport projectReport, CallCrawler callCrawler)
+        private void AnalyzeAssembly(string assemblyPath, IAssemblyResolver assemblyResolver, CallCrawler callCrawler, Action<ProjectIssue> onNewIssue)
         {
-            using (var a = AssemblyDefinition.ReadAssembly(assemblyPath,
+            using (var assembly = AssemblyDefinition.ReadAssembly(assemblyPath,
                 new ReaderParameters {ReadSymbols = true, AssemblyResolver = assemblyResolver}))
             {
-                foreach (var methodDefinition in MonoCecilHelper.AggregateAllTypeDefinitions(a.MainModule.Types)
+                foreach (var methodDefinition in MonoCecilHelper.AggregateAllTypeDefinitions(assembly.MainModule.Types)
                     .SelectMany(t => t.Methods))
                 {
                     if (!methodDefinition.HasBody)
                         continue;
 
-                    AnalyzeMethodBody(projectReport, a, methodDefinition, callCrawler);
+                    AnalyzeMethodBody(assembly, methodDefinition, callCrawler, onNewIssue);
                 }
             }
         }
 
-        private void AnalyzeMethodBody(ProjectReport projectReport, AssemblyDefinition a, MethodDefinition caller,
-            CallCrawler callCrawler)
+        private void AnalyzeMethodBody(AssemblyDefinition a, MethodDefinition caller,
+            CallCrawler callCrawler, Action<ProjectIssue> onNewIssue)
         {
             if (!caller.DebugInformation.HasSequencePoints)
                 return;
@@ -158,7 +179,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                             projectIssue.location = location;
                             projectIssue.assembly = a.Name.Name;
 
-                            projectReport.AddIssue(projectIssue);
+                            onNewIssue(projectIssue);
                         }
                     }
             }

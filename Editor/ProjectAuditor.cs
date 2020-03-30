@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Unity.ProjectAuditor.Editor.Auditors;
 using UnityEditor;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 #if UNITY_2018_1_OR_NEWER
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -71,11 +74,32 @@ namespace Unity.ProjectAuditor.Editor
         public ProjectReport Audit(IProgressBar progressBar = null)
         {
             var projectReport = new ProjectReport();
-            foreach (var auditor in m_Auditors) auditor.Audit(projectReport, progressBar);
 
+            bool completed = false;
+            Audit(projectReport.AddIssue, () => { completed = true; }, progressBar);
+
+            while(!completed)
+                Thread.Sleep(50);
             return projectReport;
         }
 
+        public void Audit(Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            int numAuditors = m_Auditors.Count;
+            foreach (var auditor in m_Auditors) auditor.Audit(onNewIssue, () =>
+            {
+                numAuditors--;
+                if (numAuditors == 0)
+                {
+                    stopwatch.Stop();
+                    Debug.Log("Project Auditor took: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
+                    onComplete();
+                }
+            }, progressBar);
+        }
+        
         public T GetAuditor<T>() where T : class
         {
             foreach (var iauditor in m_Auditors)
