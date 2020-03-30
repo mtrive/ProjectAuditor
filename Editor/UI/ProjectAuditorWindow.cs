@@ -194,16 +194,24 @@ namespace Unity.ProjectAuditor.Editor
 
         private void Analyze()
         {
+            m_ValidReport = false;
+            m_ShouldRefresh = true;
+            m_AnalysisState = AnalysisState.InProgress;
+            m_ProjectReport = new ProjectReport(); 
+
+            OnGUI();
+
             try
             {
-                m_ValidReport = false;
-                m_ShouldRefresh = true;
-                m_AnalysisState = AnalysisState.InProgress;
-                m_ProjectReport = new ProjectReport(); 
+                const int numIssuesForRefresh = 50;
+                int numNewIssues = 0;
                 m_ProjectAuditor.Audit((projectIssue) =>
                 {
                     m_ProjectReport.AddIssue(projectIssue);
-                    m_ShouldRefresh = true;
+                    
+                    // only refresh UI every N issues
+                    if (++numNewIssues % numIssuesForRefresh == 0)
+                        m_ShouldRefresh = true;
                 },
                 () =>
                 {
@@ -788,9 +796,17 @@ namespace Unity.ProjectAuditor.Editor
         {
             EditorGUILayout.BeginHorizontal(GUI.skin.box);
             {
-                GUI.enabled = m_AnalysisState == AnalysisState.Valid || m_AnalysisState == AnalysisState.NotStarted;
-                if (GUILayout.Button(Styles.AnalyzeButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
-                    Analyze();
+                if (m_AnalysisState == AnalysisState.Valid || m_AnalysisState == AnalysisState.NotStarted)
+                {
+                    if (GUILayout.Button(Styles.AnalyzeButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
+                        Analyze();
+                }
+                else
+                {
+                    GUI.enabled = false;
+                    GUILayout.Button(Styles.AnalysisInProgressButton, GUILayout.ExpandWidth(true), GUILayout.Width(80));
+                    GUI.enabled = true;
+                }
 
                 GUI.enabled = IsAnalysisValid();
                 if (GUILayout.Button(Styles.ExportButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
@@ -867,6 +883,10 @@ namespace Unity.ProjectAuditor.Editor
             public static readonly GUIContent AnalyzeButton =
                 new GUIContent("Analyze", "Analyze Project and list all issues found.");
 
+            public static readonly GUIContent AnalysisInProgressButton =
+                new GUIContent("In Progress", "Analysis in progress...please wait.");
+
+            
             public static readonly GUIContent ReloadButton =
                 new GUIContent("Reload DB", "Reload Issue Definition files.");
 

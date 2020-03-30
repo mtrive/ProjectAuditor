@@ -35,15 +35,17 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         public void Audit(Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)
         {
+            if (m_AssemblyAnalysisThread != null)
+                m_AssemblyAnalysisThread.Join();
+
             using (var compilationHelper = new AssemblyCompilationHelper())
             {
                 var compiledAssemblyPaths = compilationHelper.Compile(progressBar).Select(Path.GetFullPath);
                m_AssemblyAnalysisThread = new Thread(() => AnalyzeAssemblies(compiledAssemblyPaths, onNewIssue, onComplete));
+               m_AssemblyAnalysisThread.Name = "Assembly Analysis";
                m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
                m_AssemblyAnalysisThread.Start();
-//                AnalyzeAssemblies(compiledAssemblyPaths, onNewIssue, progressBar);
             }
-            //m_AssemblyAnalysisThread.Join();
         }
 
         private void AnalyzeAssemblies(IEnumerable<string> compiledAssemblyPaths, Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)

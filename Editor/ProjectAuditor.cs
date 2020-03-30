@@ -23,7 +23,6 @@ namespace Unity.ProjectAuditor.Editor
     {
         private static string m_DataPath;
 
-        private string[] m_AuditorNames;
         private readonly List<IAuditor> m_Auditors = new List<IAuditor>();
 
         public ProjectAuditor()
@@ -39,7 +38,7 @@ namespace Unity.ProjectAuditor.Editor
                 AssetDatabase.CreateAsset(config, assetPath);
             }
 
-            m_Auditors.Add(new ScriptAuditor(config));
+            // m_Auditors.Add(new ScriptAuditor(config));
             m_Auditors.Add(new SettingsAuditor(config));
             // Add more Auditors here...
 
@@ -85,19 +84,28 @@ namespace Unity.ProjectAuditor.Editor
 
         public void Audit(Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
 
-            int numAuditors = m_Auditors.Count;
-            foreach (var auditor in m_Auditors) auditor.Audit(onNewIssue, () =>
+            var numAuditors = m_Auditors.Count;
+            foreach (var auditor in m_Auditors)
             {
-                numAuditors--;
-                if (numAuditors == 0)
+                var startTime = stopwatch.ElapsedMilliseconds;
+                auditor.Audit(onNewIssue, () =>
                 {
-                    stopwatch.Stop();
-                    Debug.Log("Project Auditor took: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
-                    onComplete();
-                }
-            }, progressBar);
+                    if (config.logTimingsInfo) Debug.Log(auditor.GetType().Name + " took: " + (stopwatch.ElapsedMilliseconds - startTime) / 1000.0f + " seconds.");
+
+                    numAuditors--;
+                    // check if all auditors completed
+                    if (numAuditors == 0)
+                    {
+                        stopwatch.Stop();
+                        if (config.logTimingsInfo)
+                            Debug.Log("Project Auditor took: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
+
+                        onComplete();
+                    }
+                }, progressBar);
+            }
         }
         
         public T GetAuditor<T>() where T : class
