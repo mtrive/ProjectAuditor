@@ -8,6 +8,7 @@ namespace Unity.ProjectAuditor.Editor
     {
         public bool displayMutedIssues;
         public bool enableAnalyzeOnBuild;
+        public bool enableBackgroundAnalysis = true;
         public bool enableFailBuildOnIssues;
         public bool logTimingsInfo = false;
         private readonly List<Rule> m_Rules = new List<Rule>();

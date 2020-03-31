@@ -18,7 +18,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
     public class SettingsAuditor : IAuditor
     {
         private readonly List<Assembly> m_Assemblies = new List<Assembly>();
-        private readonly Assembly m_ProjectAuditorAssembly;
+        // private readonly Assembly m_ProjectAuditorAssembly;
         private readonly Evaluators m_Helpers = new Evaluators();
 
         private readonly List<KeyValuePair<string, string>> m_ProjectSettingsMapping =
@@ -26,7 +26,6 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         private readonly Dictionary<int, ISettingsAnalyzer> m_SettingsAnalyzers =
             new Dictionary<int, ISettingsAnalyzer>();
-
         private List<ProblemDescriptor> m_ProblemDescriptors;
 
         private Thread m_SettingsAnalysisThread;
@@ -37,8 +36,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             m_Assemblies.Add(assemblies.First(a => a.Location.Contains("UnityEngine.dll")));
             m_Assemblies.Add(assemblies.First(a => a.Location.Contains("UnityEditor.dll")));
 
-            m_ProjectAuditorAssembly = assemblies.First(a => a.Location.Contains("Unity.ProjectAuditor.Editor.dll"));
-            
+            // m_ProjectAuditorAssembly = assemblies.First(a => a.Location.Contains("Unity.ProjectAuditor.Editor.dll"));
+            //
             // UnityEditor
             m_ProjectSettingsMapping.Add(new KeyValuePair<string, string>("UnityEditor.PlayerSettings",
                 "Project/Player"));
@@ -94,32 +93,30 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 if (projectIssue != null) onNewIssue(projectIssue);             
             }
 
-            // if (m_SettingsAnalysisThread != null)
-            //     m_SettingsAnalysisThread.Join();
-            //
-            // m_SettingsAnalysisThread = new Thread(() => AnalyzeSettings(onNewIssue, onComplete));
-            // m_SettingsAnalysisThread.Name = "Settings Analysis";
-            // m_SettingsAnalysisThread.Priority = ThreadPriority.BelowNormal;
-            // m_SettingsAnalysisThread.Start();
-
-            //AnalyzeSettings(onNewIssue, onComplete);
-
-            AnalyzeSettings(onNewIssue, onComplete);
+            AnalyzeSettings(onNewIssue, progressBar);
             
             if (progressBar != null)
                 progressBar.ClearProgressBar();
+
+            onComplete();
         }
 
-        private void AnalyzeSettings(Action<ProjectIssue> onNewIssue, Action onComplete)
+        private void AnalyzeSettings(Action<ProjectIssue> onNewIssue, IProgressBar progressBar = null)
         {
-            var stopwatch = Stopwatch.StartNew();
-            foreach (var descriptor in m_ProblemDescriptors.Where(descriptor => !m_SettingsAnalyzers.ContainsKey(descriptor.id)))
+            var descriptors = m_ProblemDescriptors.Where(descriptor => !m_SettingsAnalyzers.ContainsKey(descriptor.id));
+
+            if (progressBar != null)
+                progressBar.Initialize("Analyzing Settings", "Analyzing project settings", descriptors.Count());
+
+            foreach (var descriptor in descriptors)
             {
+                if (progressBar != null)
+                    progressBar.AdvanceProgressBar();
+
                 SearchAndEval(descriptor, onNewIssue);
             }
-            Debug.Log("AnalyzeSettings time: " + stopwatch.ElapsedMilliseconds / 1000.0f);
-            
-            onComplete();
+            if (progressBar != null)
+                progressBar.ClearProgressBar();
         }
 
         private void AddAnalyzer(ISettingsAnalyzer analyzer)
@@ -188,14 +185,13 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             }
             else
             {
-                var paramTypes = new Type[0] { };
-                var args = new object[0] { };
-                var type = m_Helpers.GetType().FullName;
                 Profiler.BeginSample("Custom");
-                var isIssue = (bool)MethodEvaluator.Eval(m_ProjectAuditorAssembly.Location,
-                    type, descriptor.customevaluator, paramTypes, args);
-                     
+
+                var helperType = m_Helpers.GetType();
+                var theMethod = helperType.GetMethod(descriptor.customevaluator);
+                var isIssue = (bool) theMethod.Invoke(m_Helpers, null);
                 if (isIssue) AddIssue(descriptor, descriptor.description, onNewIssue);
+
                 Profiler.EndSample();
             }
             Profiler.EndSample();

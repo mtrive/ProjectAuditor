@@ -38,7 +38,7 @@ namespace Unity.ProjectAuditor.Editor
                 AssetDatabase.CreateAsset(config, assetPath);
             }
 
-            // m_Auditors.Add(new ScriptAuditor(config));
+            m_Auditors.Add(new ScriptAuditor(config));
             m_Auditors.Add(new SettingsAuditor(config));
             // Add more Auditors here...
 
@@ -106,6 +106,7 @@ namespace Unity.ProjectAuditor.Editor
                     }
                 }, progressBar);
             }
+            Debug.Log("Project Auditor time to interactive: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
         }
         
         public T GetAuditor<T>() where T : class

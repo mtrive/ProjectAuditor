@@ -17,6 +17,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 {
     public class ScriptAuditor : IAuditor
     {
+        private readonly ProjectAuditorConfig m_Config;
         private readonly List<IInstructionAnalyzer> m_InstructionAnalyzers = new List<IInstructionAnalyzer>();
         private readonly List<OpCode> m_OpCodes = new List<OpCode>();
         private string[] m_AssemblyNames;
@@ -26,6 +27,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         internal ScriptAuditor(ProjectAuditorConfig config)
         {
+            m_Config = config;
         }
 
         public IEnumerable<ProblemDescriptor> GetDescriptors()
@@ -35,16 +37,26 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         public void Audit(Action<ProjectIssue> onIssueFound, Action onComplete, IProgressBar progressBar = null)
         {
-            if (m_AssemblyAnalysisThread != null)
+            if (m_Config.enableBackgroundAnalysis && m_AssemblyAnalysisThread != null)
                 m_AssemblyAnalysisThread.Join();
 
             using (var compilationHelper = new AssemblyCompilationHelper())
             {
                 var compiledAssemblyPaths = compilationHelper.Compile(progressBar).Select(Path.GetFullPath);
-               m_AssemblyAnalysisThread = new Thread(() => AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete));
-               m_AssemblyAnalysisThread.Name = "Assembly Analysis";
-               m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
-               m_AssemblyAnalysisThread.Start();
+                if (m_Config.enableBackgroundAnalysis)
+                {
+                    // if (m_AssemblyAnalysisThread == null)
+                    {
+                        m_AssemblyAnalysisThread = new Thread(() => AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete));
+                        m_AssemblyAnalysisThread.Name = "Assembly Analysis";
+                        m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
+                    }
+                    m_AssemblyAnalysisThread.Start();
+                }
+                else
+                {
+                    AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete, progressBar);
+                }
             }
         }
 
