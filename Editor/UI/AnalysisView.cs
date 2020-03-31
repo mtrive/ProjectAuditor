@@ -102,7 +102,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             if (m_Table == null)
                 return;
-            m_Table.SetData(projectReport.GetIssues(m_Desc.category));
+            m_Table.AddIssues(projectReport.GetIssues(m_Desc.category));
         }
 
         public void OnGUI(ProjectReport projectReport)

@@ -26,9 +26,11 @@ namespace Unity.ProjectAuditor.Editor
         private readonly ProjectAuditorConfig m_Config;
 
         private readonly bool m_GroupByDescription;
-        private ProjectIssue[] m_Issues;
+        private ProjectIssue[] m_NewIssues;
         private readonly IIssuesFilter m_IssuesFilter;
 
+        private TreeViewItem m_Root;
+        
         public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader,
             bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
             multicolumnHeader)
@@ -40,9 +42,9 @@ namespace Unity.ProjectAuditor.Editor
             Reload();
         }
 
-        public void SetData(ProjectIssue[] issues)
+        public void AddIssues(ProjectIssue[] issues)
         {
-            m_Issues = issues;
+            m_NewIssues = issues;
         }
         
         protected override TreeViewItem BuildRoot()
@@ -55,12 +57,16 @@ namespace Unity.ProjectAuditor.Editor
             var index = 0;
             var idForHiddenRoot = -1;
             var depthForHiddenRoot = -1;
-            var root = new TreeViewItem(idForHiddenRoot, depthForHiddenRoot, "root");
 
-            if (m_Issues == null)
-                return root;
+            if (m_Root == null)
+            {
+                m_Root = new TreeViewItem(idForHiddenRoot, depthForHiddenRoot, "root");
+            }
+                
+            if (m_NewIssues == null)
+                return m_Root;
 
-            var filteredIssues = m_Issues.Where(issue => m_IssuesFilter.ShouldDisplay(issue));
+            var filteredIssues = m_NewIssues.Where(issue => m_IssuesFilter.ShouldDisplay(issue));
             if (m_GroupByDescription)
             {
                 // grouped by problem definition
@@ -78,7 +84,7 @@ namespace Unity.ProjectAuditor.Editor
 
                     var displayName = string.Format("{0} ({1})", groupName, issues.Count());
                     var groupItem = new IssueTableItem(index++, 0, displayName, issues.FirstOrDefault().descriptor);
-                    root.AddChild(groupItem);
+                    m_Root.AddChild(groupItem);
 
                     foreach (var issue in issues)
                     {
@@ -93,14 +99,16 @@ namespace Unity.ProjectAuditor.Editor
                 foreach (var issue in filteredIssues)
                 {
                     var item = new IssueTableItem(index++, 0, issue.descriptor.description, issue.descriptor, issue);
-                    root.AddChild(item);
+                    m_Root.AddChild(item);
                 }
             }
 
-            if (!root.hasChildren)
-                root.AddChild(new TreeViewItem(index++, 0, "No elements found"));
+            if (!m_Root.hasChildren)
+                m_Root.AddChild(new TreeViewItem(index++, 0, "No elements found"));
 
-            return root;
+            m_NewIssues = null;
+            
+            return m_Root;
         }
 
         protected override IList<TreeViewItem> BuildRows(TreeViewItem root)

@@ -219,6 +219,8 @@ namespace Unity.ProjectAuditor.Editor
                 },
                 new ProgressBarDisplay());
 
+                m_ActiveIssueTable.Reload();
+                
                 m_ValidReport = true;
             }
             catch (AssemblyCompilationException e)
@@ -242,15 +244,17 @@ namespace Unity.ProjectAuditor.Editor
                 m_AssemblyNames = scriptIssues.Select(i => i.assembly).Distinct().OrderBy(str => str).ToArray();
                 UpdateAssemblySelection();
 
+                // foreach (var view in m_AnalysisViews)
+                // {
+                //     view.SetData(m_ProjectReport);
+                // }
+                
+                m_ActiveIssueTable.Reload();
+                
                 m_AnalysisState = AnalysisState.Valid;
             }
             
-            foreach (var view in m_AnalysisViews)
-            {
-                view.SetData(m_ProjectReport);
-            }
-            
-            m_ActiveIssueTable.Reload();
+            //m_ActiveIssueTable.Reload();
         }
 
         private void Reload()
