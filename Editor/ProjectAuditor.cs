@@ -82,7 +82,7 @@ namespace Unity.ProjectAuditor.Editor
             return projectReport;
         }
 
-        public void Audit(Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)
+        public void Audit(Action<ProjectIssue> onIssueFound, Action onComplete, IProgressBar progressBar = null)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -90,7 +90,7 @@ namespace Unity.ProjectAuditor.Editor
             foreach (var auditor in m_Auditors)
             {
                 var startTime = stopwatch.ElapsedMilliseconds;
-                auditor.Audit(onNewIssue, () =>
+                auditor.Audit(onIssueFound, () =>
                 {
                     if (config.logTimingsInfo) Debug.Log(auditor.GetType().Name + " took: " + (stopwatch.ElapsedMilliseconds - startTime) / 1000.0f + " seconds.");
 
