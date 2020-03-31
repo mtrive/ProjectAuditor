@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using Unity.ProjectAuditor.Editor.SettingsAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor.Compilation;
@@ -18,7 +17,6 @@ namespace Unity.ProjectAuditor.Editor.Auditors
     public class SettingsAuditor : IAuditor
     {
         private readonly List<Assembly> m_Assemblies = new List<Assembly>();
-        // private readonly Assembly m_ProjectAuditorAssembly;
         private readonly Evaluators m_Helpers = new Evaluators();
 
         private readonly List<KeyValuePair<string, string>> m_ProjectSettingsMapping =
@@ -28,16 +26,12 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             new Dictionary<int, ISettingsAnalyzer>();
         private List<ProblemDescriptor> m_ProblemDescriptors;
 
-        private Thread m_SettingsAnalysisThread;
-
         internal SettingsAuditor(ProjectAuditorConfig config)
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
             m_Assemblies.Add(assemblies.First(a => a.Location.Contains("UnityEngine.dll")));
             m_Assemblies.Add(assemblies.First(a => a.Location.Contains("UnityEditor.dll")));
 
-            // m_ProjectAuditorAssembly = assemblies.First(a => a.Location.Contains("Unity.ProjectAuditor.Editor.dll"));
-            //
             // UnityEditor
             m_ProjectSettingsMapping.Add(new KeyValuePair<string, string>("UnityEditor.PlayerSettings",
                 "Project/Player"));
@@ -126,8 +120,6 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         private void AddIssue(ProblemDescriptor descriptor, string description, Action<ProjectIssue> onNewIssue)
         {
-            Profiler.BeginSample("AddIssue");
-
             var projectWindowPath = "";
             var mappings = m_ProjectSettingsMapping.Where(p => p.Key.Contains(descriptor.type));
             if (mappings.Count() > 0)
@@ -139,18 +131,12 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 IssueCategory.ProjectSettings,
                 new Location {path = projectWindowPath}
             ));
-            Profiler.EndSample();
         }
 
         private void SearchAndEval(ProblemDescriptor descriptor, Action<ProjectIssue> onNewIssue)
         {
-            Profiler.BeginSample("SearchAndEval");
-            //var editorAssemblyPaths = AssemblyHelper.GetPrecompiledEditorAssemblyPaths();
-            
-            int numExceptions = 0;
             if (string.IsNullOrEmpty(descriptor.customevaluator))
             {
-                Profiler.BeginSample("Builtin");
                 var paramTypes = new Type[0] { };
                 var args = new object[0] { };
                 var found = false;
@@ -173,28 +159,19 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     }
                     catch (Exception)
                     {
-                        numExceptions++;
                         // this is safe to ignore
                     }
 
-                Profiler.EndSample();
-
                 if (!found)
                     Debug.Log(descriptor.method + " not found in any assembly");
-                Debug.Log(descriptor.method + " numExceptions: " + numExceptions);
             }
             else
             {
-                Profiler.BeginSample("Custom");
-
                 var helperType = m_Helpers.GetType();
                 var theMethod = helperType.GetMethod(descriptor.customevaluator);
                 var isIssue = (bool) theMethod.Invoke(m_Helpers, null);
                 if (isIssue) AddIssue(descriptor, descriptor.description, onNewIssue);
-
-                Profiler.EndSample();
             }
-            Profiler.EndSample();
         }
     }
 }
