@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Unity.ProjectAuditor.Editor.SettingsAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
-using UnityEditor.Compilation;
 using UnityEditor.Macros;
-using UnityEngine.Profiling;
 using Assembly = System.Reflection.Assembly;
 using Attribute = Unity.ProjectAuditor.Editor.SettingsAnalyzers.Attribute;
 using Debug = UnityEngine.Debug;
-using ThreadPriority = System.Threading.ThreadPriority;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
 {
@@ -73,7 +69,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             m_ProblemDescriptors.Add(descriptor);
         }
 
-        public void Audit(Action<ProjectIssue> onNewIssue, Action onComplete, IProgressBar progressBar = null)
+        public void Audit(Action<ProjectIssue> onIssueFound, Action onComplete, IProgressBar progressBar = null)
         {
             if (progressBar != null)
                 progressBar.Initialize("Analyzing Settings", "Analyzing project settings", m_SettingsAnalyzers.Count);
@@ -84,10 +80,10 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     progressBar.AdvanceProgressBar();
 
                 var projectIssue = keyValuePair.Value.Analyze();
-                if (projectIssue != null) onNewIssue(projectIssue);             
+                if (projectIssue != null) onIssueFound(projectIssue);             
             }
 
-            AnalyzeSettings(onNewIssue, progressBar);
+            AnalyzeSettings(onIssueFound, progressBar);
             
             if (progressBar != null)
                 progressBar.ClearProgressBar();
@@ -95,7 +91,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             onComplete();
         }
 
-        private void AnalyzeSettings(Action<ProjectIssue> onNewIssue, IProgressBar progressBar = null)
+        private void AnalyzeSettings(Action<ProjectIssue> onIssueFound, IProgressBar progressBar = null)
         {
             var descriptors = m_ProblemDescriptors.Where(descriptor => !m_SettingsAnalyzers.ContainsKey(descriptor.id));
 
@@ -107,7 +103,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 if (progressBar != null)
                     progressBar.AdvanceProgressBar();
 
-                SearchAndEval(descriptor, onNewIssue);
+                SearchAndEval(descriptor, onIssueFound);
             }
             if (progressBar != null)
                 progressBar.ClearProgressBar();
@@ -118,13 +114,13 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             m_SettingsAnalyzers.Add(analyzer.GetDescriptorId(), analyzer);
         }
 
-        private void AddIssue(ProblemDescriptor descriptor, string description, Action<ProjectIssue> onNewIssue)
+        private void AddIssue(ProblemDescriptor descriptor, string description, Action<ProjectIssue> onIssueFound)
         {
             var projectWindowPath = "";
             var mappings = m_ProjectSettingsMapping.Where(p => p.Key.Contains(descriptor.type));
             if (mappings.Count() > 0)
                 projectWindowPath = mappings.First().Value;
-            onNewIssue(new ProjectIssue
+            onIssueFound(new ProjectIssue
             (
                 descriptor,
                 description,
@@ -133,7 +129,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             ));
         }
 
-        private void SearchAndEval(ProblemDescriptor descriptor, Action<ProjectIssue> onNewIssue)
+        private void SearchAndEval(ProblemDescriptor descriptor, Action<ProjectIssue> onIssueFound)
         {
             if (string.IsNullOrEmpty(descriptor.customevaluator))
             {
@@ -150,7 +146,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                         
                         if (value.ToString() == descriptor.value)
                         {
-                            AddIssue(descriptor, string.Format("{0}: {1}", descriptor.description, value), onNewIssue);
+                            AddIssue(descriptor, string.Format("{0}: {1}", descriptor.description, value), onIssueFound);
                         }
 
                         // Eval did not throw exception so we can stop iterating
@@ -170,7 +166,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 var helperType = m_Helpers.GetType();
                 var theMethod = helperType.GetMethod(descriptor.customevaluator);
                 var isIssue = (bool) theMethod.Invoke(m_Helpers, null);
-                if (isIssue) AddIssue(descriptor, descriptor.description, onNewIssue);
+                if (isIssue) AddIssue(descriptor, descriptor.description, onIssueFound);
             }
         }
     }

@@ -26,14 +26,6 @@ namespace Unity.ProjectAuditor.Editor
             return result;
         }
 
-        // public IEnumerable<ProjectIssue> GetIssues(IssueCategory category)
-        // {
-        //     mutex.WaitOne();
-        //     var result = m_Issues.Where(i => i.category == category);
-        //     mutex.ReleaseMutex();
-        //     return result;
-        // }
-
         public ProjectIssue[] GetIssues(IssueCategory category)
         {
             mutex.WaitOne();
@@ -42,7 +34,6 @@ namespace Unity.ProjectAuditor.Editor
             return result;
         }
 
-        
         public void AddIssue(ProjectIssue projectIssue)
         {
             mutex.WaitOne();

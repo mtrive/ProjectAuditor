@@ -41,18 +41,6 @@ namespace Unity.ProjectAuditor.Editor.Utils
                 yield return dir;
         }
 
-        public static IEnumerable<string> GetPrecompiledEditorAssemblyPaths()
-        {
-            var assemblyPaths = new List<string>();
-#if UNITY_2019_1_OR_NEWER
-            assemblyPaths.AddRange(CompilationPipeline.GetPrecompiledAssemblyPaths(CompilationPipeline.PrecompiledAssemblySources
-                .UnityEditor));
-#else
-            assemblyPaths.AddRange(AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.Location));
-#endif
-            return assemblyPaths;
-        }
-
         public static IEnumerable<string> GetPrecompiledEngineAssemblyPaths()
         {
             var assemblyPaths = new List<string>();
