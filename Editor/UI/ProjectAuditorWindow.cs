@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.ProjectAuditor.Editor.CodeAnalysis;
@@ -175,7 +175,7 @@ namespace Unity.ProjectAuditor.Editor
         private bool MatchesSearch(string field)
         {
             return !string.IsNullOrEmpty(field) &&
-                   field.IndexOf(m_SearchText, StringComparison.CurrentCultureIgnoreCase) >= 0;
+                field.IndexOf(m_SearchText, StringComparison.CurrentCultureIgnoreCase) >= 0;
         }
 
         private void Analyze()
@@ -618,6 +618,8 @@ namespace Unity.ProjectAuditor.Editor
 
                 m_SearchText = m_SearchField.OnGUI(searchRect, m_SearchText);
 
+                m_ActiveIssueTable.searchString = m_SearchText;
+
                 EditorGUILayout.EndHorizontal();
 
                 var shouldRefresh = false;
@@ -656,7 +658,7 @@ namespace Unity.ProjectAuditor.Editor
         public void SetAssemblySelection(TreeViewSelection selection)
         {
             m_AssemblySelection = selection;
-            RefreshDisplay();
+            //   RefreshDisplay();
         }
 
         private void UpdateAssemblySelection()
@@ -712,7 +714,7 @@ namespace Unity.ProjectAuditor.Editor
         public void SetAreaSelection(TreeViewSelection selection)
         {
             m_AreaSelection = selection;
-            RefreshDisplay();
+            //RefreshDisplay();
         }
 
         private void SetRuleForItem(IssueTableItem item, Rule.Action ruleAction)
@@ -860,7 +862,7 @@ namespace Unity.ProjectAuditor.Editor
                 new GUIContent("Inverted Call Hierarchy", "Inverted Call Hierarchy");
 
             public static readonly string HelpText =
-                @"Project Auditor is an experimental static analysis tool for Unity Projects.
+@"Project Auditor is an experimental static analysis tool for Unity Projects.
 This tool will analyze scripts and project settings of any Unity project
 and report a list a possible problems that might affect performance, memory and other areas.
 

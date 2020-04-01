@@ -29,9 +29,13 @@ namespace Unity.ProjectAuditor.Editor
         private readonly ProjectIssue[] m_Issues;
         private readonly IIssuesFilter m_IssuesFilter;
 
+        List<TreeViewItem> m_Rows = new List<TreeViewItem>(100);
+        List<IssueTableItem> m_TreeViewItemGroups;
+        List<IssueTableItem> m_TreeViewItemIssues;
+
         public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader, ProjectIssue[] issues,
-            bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
-            multicolumnHeader)
+                          bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
+                                                                                                                   multicolumnHeader)
         {
             m_Config = config;
             m_IssuesFilter = issuesFilter;
@@ -43,64 +47,72 @@ namespace Unity.ProjectAuditor.Editor
 
         protected override TreeViewItem BuildRoot()
         {
-            // SteveM TODO - Documentation says that BuildRoot should ONLY build the root table item,
-            // and all this logic should be moved to BuildRows()
-            // https://docs.unity3d.com/ScriptReference/IMGUI.Controls.TreeView.BuildRows.html
-            // This would involve implementing getNewSelectionOverride, GetAncestors() and GetDescendantsThatHaveChildren()
-            // Which seems like a lot of extra complexity unless we're running into serious performance issues
-            var index = 0;
+            var id = 0;
             var idForHiddenRoot = -1;
             var depthForHiddenRoot = -1;
             var root = new TreeViewItem(idForHiddenRoot, depthForHiddenRoot, "root");
 
-            var filteredIssues = m_Issues.Where(issue => m_IssuesFilter.ShouldDisplay(issue));
             if (m_GroupByDescription)
             {
-                // grouped by problem definition
-                var allGroupsSet = new HashSet<string>();
-                foreach (var issue in filteredIssues)
-                    if (!allGroupsSet.Contains(issue.descriptor.description))
-                        allGroupsSet.Add(issue.descriptor.description);
+                var descriptors = m_Issues.Select(i => i.descriptor).Distinct();
+                m_TreeViewItemGroups = new List<IssueTableItem>(descriptors.Count());
 
-                var allGroups = allGroupsSet.ToList();
-                allGroups.Sort();
-
-                foreach (var groupName in allGroups)
+                foreach (var descriptor in descriptors)
                 {
-                    var issues = filteredIssues.Where(i => groupName.Equals(i.descriptor.description));
-
-                    var displayName = string.Format("{0} ({1})", groupName, issues.Count());
-                    var groupItem = new IssueTableItem(index++, 0, displayName, issues.FirstOrDefault().descriptor);
-                    root.AddChild(groupItem);
-
-                    foreach (var issue in issues)
-                    {
-                        var item = new IssueTableItem(index++, 1, issue.name, issue.descriptor, issue);
-                        groupItem.AddChild(item);
-                    }
+                    var groupItem = new IssueTableItem(id++, 0, descriptor);
+                    m_TreeViewItemGroups.Add(groupItem);
                 }
             }
-            else
+
+            m_TreeViewItemIssues = new List<IssueTableItem>(m_Issues.Length);
+            foreach (var issue in m_Issues)
             {
-                // flat view
-                foreach (var issue in filteredIssues)
-                {
-                    var item = new IssueTableItem(index++, 0, issue.descriptor.description, issue.descriptor, issue);
-                    root.AddChild(item);
-                }
+                var depth = m_GroupByDescription ? 1 : 0;
+                var item = new IssueTableItem(id++, depth, issue.name, issue.descriptor, issue);
+                m_TreeViewItemIssues.Add(item);
             }
-
-            if (!root.hasChildren)
-                root.AddChild(new TreeViewItem(index++, 0, "No elements found"));
 
             return root;
         }
 
         protected override IList<TreeViewItem> BuildRows(TreeViewItem root)
         {
-            var rows = base.BuildRows(root);
-            SortIfNeeded(rows);
-            return rows;
+            m_Rows.Clear();
+
+            var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.ShouldDisplay(item.ProjectIssue));
+            if (m_GroupByDescription)
+            {
+                var descriptors = filteredItems.Select(i => i.ProblemDescriptor).Distinct();
+                foreach (var descriptor in descriptors)
+                {
+                    var group = m_TreeViewItemGroups.Find(g => g.ProblemDescriptor.Equals(descriptor));
+                    m_Rows.Add(group);
+
+                    var groupIsExpanded = state.expandedIDs.Contains(group.id);
+                    var children = filteredItems.Where(item => item.ProblemDescriptor.Equals(descriptor));
+
+                    group.displayName = string.Format("{0} ({1})", descriptor.description, children.Count());
+                    if (group.children != null)
+                        group.children.Clear();
+
+                    foreach (var child in children)
+                    {
+                        if (groupIsExpanded)
+                            m_Rows.Add(child);
+                        group.AddChild(child);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var item in filteredItems)
+                {
+                    m_Rows.Add(item);
+                }
+            }
+            //SortIfNeeded(m_Rows);
+
+            return m_Rows;
         }
 
         protected override void RowGUI(RowGUIArgs args)
@@ -112,7 +124,7 @@ namespace Unity.ProjectAuditor.Editor
         private void CellGUI(Rect cellRect, TreeViewItem treeViewItem, int column, ref RowGUIArgs args)
         {
             // only indent first column
-            if ((int) Column.Description == column)
+            if ((int)Column.Description == column)
             {
                 var indent = GetContentIndent(treeViewItem) + extraSpaceBeforeIconAndLabel;
                 cellRect.xMin += indent;
@@ -134,7 +146,7 @@ namespace Unity.ProjectAuditor.Editor
             if (rule != null && rule.action == Rule.Action.None) GUI.enabled = false;
 
             if (item.hasChildren)
-                switch ((Column) column)
+                switch ((Column)column)
                 {
                     case Column.Description:
                         EditorGUI.LabelField(cellRect, new GUIContent(item.displayName, item.displayName));
@@ -144,13 +156,13 @@ namespace Unity.ProjectAuditor.Editor
                         break;
                 }
             else
-                switch ((Column) column)
+                switch ((Column)column)
                 {
                     case Column.Priority:
                         if (issue.isPerfCriticalContext)
 #if UNITY_2018_3_OR_NEWER
                             EditorGUI.LabelField(cellRect,
-                                EditorGUIUtility.TrIconContent(PerfCriticalIconName, "Performance Critical Context"));
+                            EditorGUIUtility.TrIconContent(PerfCriticalIconName, "Performance Critical Context"));
 #else
                             EditorGUI.LabelField(cellRect, new GUIContent(EditorGUIUtility.FindTexture(PerfCriticalIconName), "Performance Critical Context"));
 #endif
@@ -330,7 +342,7 @@ namespace Unity.ProjectAuditor.Editor
                         string firstString;
                         string secondString;
 
-                        switch ((Column) columnSortOrder[i])
+                        switch ((Column)columnSortOrder[i])
                         {
                             case Column.Description:
                                 firstString = firstTree.m_Item.displayName;

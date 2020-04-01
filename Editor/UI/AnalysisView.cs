@@ -45,12 +45,12 @@ namespace Unity.ProjectAuditor.Editor
 
             var state = new TreeViewState();
             var columnsList = new List<MultiColumnHeaderState.Column>();
-            var numColumns = (int) IssueTable.Column.Count;
+            var numColumns = (int)IssueTable.Column.Count;
             for (var i = 0; i < numColumns; i++)
             {
                 var width = 0;
                 var minWidth = 0;
-                switch ((IssueTable.Column) i)
+                switch ((IssueTable.Column)i)
                 {
                     case IssueTable.Column.Description:
                         width = 300;
@@ -103,13 +103,14 @@ namespace Unity.ProjectAuditor.Editor
 
         public void OnGUI(ProjectReport projectReport)
         {
+            var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
+            m_Table.OnGUI(r);
+
             var issues = projectReport.GetIssues(m_Desc.category).Where(m_Filter.ShouldDisplay);
             var selectedItems = m_Table.GetSelectedItems();
             var selectedIssues = selectedItems.Select(i => i.ProjectIssue).ToArray();
             var info = selectedIssues.Length + " / " + issues.Count() + " issues";
 
-            var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
-            m_Table.OnGUI(r);
             EditorGUILayout.LabelField(info, GUILayout.ExpandWidth(true), GUILayout.Width(200));
         }
 
