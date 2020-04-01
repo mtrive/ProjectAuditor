@@ -107,6 +107,10 @@ namespace Unity.ProjectAuditor.Editor
                 if (m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) == Rule.Action.None)
                     return false;
 
+            if (m_ProjectAuditor.config.displayOnlyCrititalIssues)
+                if (!issue.isPerfCriticalContext)
+                    return false;
+
             if (!string.IsNullOrEmpty(m_SearchText))
                 if (!MatchesSearch(issue.description) &&
                     !MatchesSearch(issue.filename) &&
@@ -624,8 +628,6 @@ namespace Unity.ProjectAuditor.Editor
 
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("Selected :", GUILayout.ExpandWidth(true), GUILayout.Width(80));
-                m_ProjectAuditor.config.displayMutedIssues = EditorGUILayout.ToggleLeft("Show Muted Issues",
-                    m_ProjectAuditor.config.displayMutedIssues, GUILayout.Width(120));
                 if (GUILayout.Button(Styles.MuteButton, GUILayout.ExpandWidth(true), GUILayout.Width(100)))
                 {
                     var selectedItems = m_ActiveIssueTable.GetSelectedItems();
@@ -640,6 +642,14 @@ namespace Unity.ProjectAuditor.Editor
                     foreach (var item in selectedItems) ClearRulesForItem(item);
                 }
 
+                EditorGUILayout.EndHorizontal();
+                
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Show :", GUILayout.ExpandWidth(true), GUILayout.Width(80));
+                m_ProjectAuditor.config.displayOnlyCrititalIssues = EditorGUILayout.ToggleLeft("Only Critical Issues",
+                    m_ProjectAuditor.config.displayOnlyCrititalIssues, GUILayout.Width(160));
+                m_ProjectAuditor.config.displayMutedIssues = EditorGUILayout.ToggleLeft("Muted Issues",
+                    m_ProjectAuditor.config.displayMutedIssues, GUILayout.Width(127));
                 EditorGUILayout.EndHorizontal();
 
                 if (EditorGUI.EndChangeCheck()) shouldRefresh = true;
