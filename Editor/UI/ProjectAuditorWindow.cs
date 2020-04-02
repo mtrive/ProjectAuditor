@@ -36,6 +36,7 @@ namespace Unity.ProjectAuditor.Editor
                 name = IssueCategory.ApiCalls.ToString(),
                 groupByDescription = true,
                 showAssemblySelection = true,
+                showCritical = true,
                 showInvertedCallTree = true,
                 showFilenameColumn = true,
                 showAssemblyColumn = true
@@ -46,6 +47,7 @@ namespace Unity.ProjectAuditor.Editor
                 name = IssueCategory.ProjectSettings.ToString(),
                 groupByDescription = false,
                 showAssemblySelection = false,
+                showCritical = false,
                 showInvertedCallTree = false,
                 showFilenameColumn = false,
                 showAssemblyColumn = false
@@ -107,9 +109,10 @@ namespace Unity.ProjectAuditor.Editor
                 if (m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) == Rule.Action.None)
                     return false;
 
-            if (m_ProjectAuditor.config.displayOnlyCrititalIssues)
-                if (!issue.isPerfCriticalContext)
-                    return false;
+            if (m_ActiveAnalysisView.desc.showCritical &&
+                m_ProjectAuditor.config.displayOnlyCrititalIssues &&
+                !issue.isPerfCriticalContext)
+                return false;
 
             if (!string.IsNullOrEmpty(m_SearchText))
                 if (!MatchesSearch(issue.description) &&
@@ -646,8 +649,12 @@ namespace Unity.ProjectAuditor.Editor
                 
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("Show :", GUILayout.ExpandWidth(true), GUILayout.Width(80));
+
+                GUI.enabled = m_ActiveAnalysisView.desc.showCritical;
                 m_ProjectAuditor.config.displayOnlyCrititalIssues = EditorGUILayout.ToggleLeft("Only Critical Issues",
                     m_ProjectAuditor.config.displayOnlyCrititalIssues, GUILayout.Width(160));
+                GUI.enabled = true; 
+
                 m_ProjectAuditor.config.displayMutedIssues = EditorGUILayout.ToggleLeft("Muted Issues",
                     m_ProjectAuditor.config.displayMutedIssues, GUILayout.Width(127));
                 EditorGUILayout.EndHorizontal();
