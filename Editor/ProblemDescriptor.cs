@@ -31,7 +31,7 @@ namespace Unity.ProjectAuditor.Editor
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ProblemDescriptor) obj);
+            return Equals((ProblemDescriptor)obj);
         }
 
         public override int GetHashCode()
