@@ -44,7 +44,7 @@ namespace Unity.ProjectAuditor.Editor
 
         public void SetData(ProjectIssue[] issues)
         {
-            var id = 0;
+            var id = 1;
 
             if (m_GroupByDescription)
             {
@@ -81,6 +81,12 @@ namespace Unity.ProjectAuditor.Editor
             m_Rows.Clear();
 
             var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.ShouldDisplay(item.ProjectIssue));
+            if (!filteredItems.Any())
+            {
+                m_Rows.Add(new TreeViewItem(0, 0, "No issue found"));
+                return m_Rows;
+            }
+
             if (m_GroupByDescription)
             {
                 var descriptors = filteredItems.Select(i => i.ProblemDescriptor).Distinct();
@@ -134,7 +140,11 @@ namespace Unity.ProjectAuditor.Editor
 
             var item = treeViewItem as IssueTableItem;
             if (item == null)
+            {
+                if ((Column)column == Column.Description)
+                    EditorGUI.LabelField(cellRect, new GUIContent(treeViewItem.displayName, treeViewItem.displayName));
                 return;
+            }
 
             var issue = item.ProjectIssue;
             var descriptor = item.ProblemDescriptor;
