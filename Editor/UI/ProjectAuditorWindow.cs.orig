@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.ProjectAuditor.Editor.CodeAnalysis;
@@ -36,6 +36,7 @@ namespace Unity.ProjectAuditor.Editor
                 name = IssueCategory.ApiCalls.ToString(),
                 groupByDescription = true,
                 showAssemblySelection = true,
+                showCritical = true,
                 showInvertedCallTree = true,
                 showFilenameColumn = true,
                 showAssemblyColumn = true
@@ -641,16 +642,6 @@ namespace Unity.ProjectAuditor.Editor
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.LabelField("Selected :", GUILayout.ExpandWidth(true), GUILayout.Width(80));
 
-                bool wasDisplayingMuted = m_ProjectAuditor.config.displayMutedIssues;
-                m_ProjectAuditor.config.displayMutedIssues = EditorGUILayout.ToggleLeft("Show Muted Issues",
-                    m_ProjectAuditor.config.displayMutedIssues, GUILayout.Width(120));
-
-                if (wasDisplayingMuted != m_ProjectAuditor.config.displayMutedIssues)
-                {
-                    var analytic = ProjectAuditorAnalytics.BeginAnalytic();
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ShowMuted, analytic);
-                }
-                
                 if (GUILayout.Button(Styles.MuteButton, GUILayout.ExpandWidth(true), GUILayout.Width(100)))
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
@@ -679,8 +670,16 @@ namespace Unity.ProjectAuditor.Editor
                     m_ProjectAuditor.config.displayOnlyCrititalIssues, GUILayout.Width(160));
                 GUI.enabled = true; 
 
+                bool wasDisplayingMuted = m_ProjectAuditor.config.displayMutedIssues;
                 m_ProjectAuditor.config.displayMutedIssues = EditorGUILayout.ToggleLeft("Muted Issues",
                     m_ProjectAuditor.config.displayMutedIssues, GUILayout.Width(127));
+                
+                if (wasDisplayingMuted != m_ProjectAuditor.config.displayMutedIssues)
+                {
+                    var analytic = ProjectAuditorAnalytics.BeginAnalytic();
+                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ShowMuted, analytic);
+                }
+                
                 EditorGUILayout.EndHorizontal();
 
                 if (EditorGUI.EndChangeCheck()) shouldRefresh = true;

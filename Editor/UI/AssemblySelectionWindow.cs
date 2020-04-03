@@ -83,7 +83,13 @@ namespace Unity.ProjectAuditor.Editor
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Clear", GUILayout.Width(50))) m_MultiSelectionTable.ClearSelection();
             if (GUILayout.Button("Apply", GUILayout.Width(50)))
+            {
+                var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                 m_ProjectAuditorWindow.SetAssemblySelection(m_MultiSelectionTable.GetTreeViewSelection());
+                // stephenm TODO - we need much more data in the payload here!
+                ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.AssemblySelectApply, analytic);
+            }
+
             EditorGUILayout.EndHorizontal();
 
             if (m_MultiSelectionTable != null)
