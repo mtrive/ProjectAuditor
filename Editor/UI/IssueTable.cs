@@ -26,35 +26,29 @@ namespace Unity.ProjectAuditor.Editor
         private readonly ProjectAuditorConfig m_Config;
 
         private readonly bool m_GroupByDescription;
-        private readonly ProjectIssue[] m_Issues;
         private readonly IIssuesFilter m_IssuesFilter;
 
         List<TreeViewItem> m_Rows = new List<TreeViewItem>(100);
         List<IssueTableItem> m_TreeViewItemGroups;
         List<IssueTableItem> m_TreeViewItemIssues;
 
-        public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader, ProjectIssue[] issues,
+        public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader,
                           bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
                                                                                                                    multicolumnHeader)
         {
             m_Config = config;
             m_IssuesFilter = issuesFilter;
-            m_Issues = issues;
             m_GroupByDescription = groupByDescription;
             multicolumnHeader.sortingChanged += OnSortingChanged;
-            Reload();
         }
 
-        protected override TreeViewItem BuildRoot()
+        public void SetData(ProjectIssue[] issues)
         {
             var id = 0;
-            var idForHiddenRoot = -1;
-            var depthForHiddenRoot = -1;
-            var root = new TreeViewItem(idForHiddenRoot, depthForHiddenRoot, "root");
 
             if (m_GroupByDescription)
             {
-                var descriptors = m_Issues.Select(i => i.descriptor).Distinct();
+                var descriptors = issues.Select(i => i.descriptor).Distinct();
                 m_TreeViewItemGroups = new List<IssueTableItem>(descriptors.Count());
 
                 foreach (var descriptor in descriptors)
@@ -64,13 +58,20 @@ namespace Unity.ProjectAuditor.Editor
                 }
             }
 
-            m_TreeViewItemIssues = new List<IssueTableItem>(m_Issues.Length);
-            foreach (var issue in m_Issues)
+            m_TreeViewItemIssues = new List<IssueTableItem>(issues.Length);
+            foreach (var issue in issues)
             {
                 var depth = m_GroupByDescription ? 1 : 0;
                 var item = new IssueTableItem(id++, depth, issue.name, issue.descriptor, issue);
                 m_TreeViewItemIssues.Add(item);
             }
+        }
+
+        protected override TreeViewItem BuildRoot()
+        {
+            var idForHiddenRoot = -1;
+            var depthForHiddenRoot = -1;
+            var root = new TreeViewItem(idForHiddenRoot, depthForHiddenRoot, "root");
 
             return root;
         }
@@ -110,7 +111,7 @@ namespace Unity.ProjectAuditor.Editor
                     m_Rows.Add(item);
                 }
             }
-            //SortIfNeeded(m_Rows);
+            SortIfNeeded(m_Rows);
 
             return m_Rows;
         }

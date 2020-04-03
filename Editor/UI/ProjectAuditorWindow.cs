@@ -205,7 +205,8 @@ namespace Unity.ProjectAuditor.Editor
             if (!IsAnalysisValid())
                 return;
 
-            foreach (var view in m_AnalysisViews) view.CreateTable(m_ProjectReport);
+            foreach (var view in m_AnalysisViews)
+                view.CreateTable(m_ProjectReport);
 
             m_ActiveIssueTable.Reload();
         }
@@ -658,7 +659,7 @@ namespace Unity.ProjectAuditor.Editor
         public void SetAssemblySelection(TreeViewSelection selection)
         {
             m_AssemblySelection = selection;
-            //   RefreshDisplay();
+            RefreshDisplay();
         }
 
         private void UpdateAssemblySelection()
@@ -714,7 +715,7 @@ namespace Unity.ProjectAuditor.Editor
         public void SetAreaSelection(TreeViewSelection selection)
         {
             m_AreaSelection = selection;
-            //RefreshDisplay();
+            RefreshDisplay();
         }
 
         private void SetRuleForItem(IssueTableItem item, Rule.Action ruleAction)
