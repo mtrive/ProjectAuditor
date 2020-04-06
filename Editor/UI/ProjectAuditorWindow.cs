@@ -64,7 +64,6 @@ namespace Unity.ProjectAuditor.Editor
         private string[] m_ModeNames;
         private ProjectAuditor m_ProjectAuditor;
         private bool m_ShouldRefresh = false;
-        private AnalysisState m_AnalysisState = AnalysisState.NotStarted;
 
         // UI
         private readonly List<AnalysisView> m_AnalysisViews = new List<AnalysisView>();
@@ -85,7 +84,7 @@ namespace Unity.ProjectAuditor.Editor
         [SerializeField] private bool m_ShowCallTree;
         [SerializeField] private bool m_ShowDetails = true;
         [SerializeField] private bool m_ShowRecommendation = true;
-        [SerializeField] private bool m_ValidReport;
+        [SerializeField] AnalysisState m_AnalysisState = AnalysisState.NotStarted;
 
         private AnalysisView m_ActiveAnalysisView
         {
@@ -167,7 +166,7 @@ namespace Unity.ProjectAuditor.Editor
                 var view = new AnalysisView(desc, m_ProjectAuditor.config, this);
                 view.CreateTable();
 
-                if (m_ValidReport)
+                if (m_AnalysisState == AnalysisState.Valid)
                     view.AddIssues(m_ProjectReport.GetIssues(view.desc.category));
 
                 m_AnalysisViews.Add(view);
@@ -194,7 +193,7 @@ namespace Unity.ProjectAuditor.Editor
 
         private bool IsAnalysisValid()
         {
-            return m_ValidReport;
+            return m_AnalysisState != AnalysisState.NotStarted;
         }
 
         private bool MatchesSearch(string field)
@@ -205,7 +204,6 @@ namespace Unity.ProjectAuditor.Editor
 
         private void Analyze()
         {
-            m_ValidReport = false;
             m_ShouldRefresh = true;
             m_AnalysisState = AnalysisState.InProgress;
             m_ProjectReport = new ProjectReport();
@@ -254,8 +252,6 @@ namespace Unity.ProjectAuditor.Editor
                 newIssues.Clear();
 
                 RefreshDisplay();
-
-                m_ValidReport = true;
             }
             catch (AssemblyCompilationException e)
             {

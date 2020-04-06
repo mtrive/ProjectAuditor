@@ -104,8 +104,6 @@ namespace Unity.ProjectAuditor.Editor
 
         public void AddIssues(IEnumerable<ProjectIssue> issues)
         {
-            if (m_Table == null)
-                return;
             m_Table.AddIssues(issues.Where(i => i.category == m_Desc.category).ToArray());
         }
 
