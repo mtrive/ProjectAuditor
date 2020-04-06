@@ -48,17 +48,17 @@ namespace Unity.ProjectAuditor.Editor
                 showFilenameColumn = true,
                 showAssemblyColumn = true
             },
-            // new AnalysisViewDescriptor
-            // {
-            //     category = IssueCategory.ProjectSettings,
-            //     name = IssueCategory.ProjectSettings.ToString(),
-            //     groupByDescription = false,
-            //     showAssemblySelection = false,
-            //     showCritical = false,
-            //     showInvertedCallTree = false,
-            //     showFilenameColumn = false,
-            //     showAssemblyColumn = false
-            // }
+            new AnalysisViewDescriptor
+            {
+                category = IssueCategory.ProjectSettings,
+                name = IssueCategory.ProjectSettings.ToString(),
+                groupByDescription = false,
+                showAssemblySelection = false,
+                showCritical = false,
+                showInvertedCallTree = false,
+                showFilenameColumn = false,
+                showAssemblyColumn = false
+            }
         };
 
         private string[] m_ModeNames;
@@ -105,11 +105,11 @@ namespace Unity.ProjectAuditor.Editor
 
         public bool ShouldDisplay(ProjectIssue issue)
         {
-            // if (m_ActiveAnalysisView.desc.showAssemblySelection &&
-            //     m_AssemblySelection != null &&
-            //     !m_AssemblySelection.Contains(issue.assembly) &&
-            //     !m_AssemblySelection.ContainsGroup("All"))
-            //     return false;
+            if (m_ActiveAnalysisView.desc.showAssemblySelection &&
+                m_AssemblySelection != null &&
+                !m_AssemblySelection.Contains(issue.assembly) &&
+                !m_AssemblySelection.ContainsGroup("All"))
+                return false;
 
             if (!m_AreaSelection.Contains(issue.descriptor.area) &&
                 !m_AreaSelection.ContainsGroup("All"))
@@ -167,6 +167,9 @@ namespace Unity.ProjectAuditor.Editor
                 var view = new AnalysisView(desc, m_ProjectAuditor.config, this);
                 view.CreateTable();
 
+                if (m_ValidReport)
+                    view.AddIssues(m_ProjectReport.GetIssues(view.desc.category));
+
                 m_AnalysisViews.Add(view);
             }
 
@@ -207,41 +210,57 @@ namespace Unity.ProjectAuditor.Editor
             m_AnalysisState = AnalysisState.InProgress;
             m_ProjectReport = new ProjectReport();
 
+            const int numIssuesForRefresh = 50;
+            var numNewIssues = 0;
+            var newIssues = new List<ProjectIssue>();
+
             try
             {
-                const int numIssuesForRefresh = 50;
-                int numNewIssues = 0;
                 m_ProjectAuditor.Audit((projectIssue) =>
                 {
+                    newIssues.Add(projectIssue);
                     m_ProjectReport.AddIssue(projectIssue);
 
                     // only refresh UI every N issues
-                    if (++numNewIssues % numIssuesForRefresh == 0)
-                        m_ShouldRefresh = true;
+                    // if (++numNewIssues % numIssuesForRefresh == 0)
+                    // {
+                    //     foreach (var view in m_AnalysisViews)
+                    //     {
+                    //         view.AddIssues(newIssues);
+                    //     }
+                    //
+                    //     newIssues.Clear();
+                    //     m_ShouldRefresh = true;
+                    // }
                 },
                     () =>
                     {
+                        // add final batch of issues
+                        foreach (var view in m_AnalysisViews)
+                        {
+                            view.AddIssues(newIssues);
+                        }
+                        newIssues.Clear();
+
                         m_AnalysisState = AnalysisState.Completed;
                     },
                     new ProgressBarDisplay());
 
-                //m_ActiveIssueTable.Reload();
+                // add initial batch of issues
+                foreach (var view in m_AnalysisViews)
+                {
+                    view.AddIssues(newIssues);
+                }
+                newIssues.Clear();
+
+                RefreshDisplay();
 
                 m_ValidReport = true;
             }
             catch (AssemblyCompilationException e)
             {
                 Debug.LogError(e);
-                m_ValidReport = false;
             }
-
-            // add initial batch of issues
-            foreach (var view in m_AnalysisViews)
-            {
-                view.AddIssues(m_ProjectReport);
-            }
-
-            RefreshDisplay();
         }
 
         private void RefreshDisplay()
@@ -256,11 +275,6 @@ namespace Unity.ProjectAuditor.Editor
                 m_AssemblyNames = scriptIssues.Select(i => i.assembly).Distinct().OrderBy(str => str).ToArray();
                 UpdateAssemblySelection();
 
-                // foreach (var view in m_AnalysisViews)
-                // {
-                //     view.AddIssues(m_ProjectReport);
-                // }
-
                 m_AnalysisState = AnalysisState.Valid;
             }
 
@@ -270,7 +284,6 @@ namespace Unity.ProjectAuditor.Editor
         private void Reload()
         {
             m_ProjectAuditor.LoadDatabase();
-            // m_IssueTables.Clear();
         }
 
         private void Export()
@@ -662,7 +675,7 @@ namespace Unity.ProjectAuditor.Editor
 
                 EditorGUILayout.EndHorizontal();
 
-                // DrawAssemblyFilter();
+                DrawAssemblyFilter();
                 DrawAreaFilter();
 
                 EditorGUI.BeginChangeCheck();

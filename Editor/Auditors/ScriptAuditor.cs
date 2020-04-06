@@ -43,15 +43,17 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             using (var compilationHelper = new AssemblyCompilationHelper())
             {
                 var compiledAssemblyPaths = compilationHelper.Compile(progressBar).Select(Path.GetFullPath);
-                if (m_Config.enableBackgroundAnalysis)
+                if (m_Config.enableBackgroundAnalysis && AssemblyHelper.IsPackageInfoAvailable())
                 {
-                    // if (m_AssemblyAnalysisThread == null)
-                    {
-                        m_AssemblyAnalysisThread = new Thread(() => AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete));
-                        m_AssemblyAnalysisThread.Name = "Assembly Analysis";
-                        m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
-                    }
-                    m_AssemblyAnalysisThread.Start();
+                    // var user = compiledAssemblyPaths.Where(a =>
+                    //     !AssemblyHelper.IsPackageAssembly(a));
+
+                    AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete, progressBar);
+
+                    // m_AssemblyAnalysisThread = new Thread(() => AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete));
+                    // m_AssemblyAnalysisThread.Name = "Assembly Analysis";
+                    // m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
+                    // m_AssemblyAnalysisThread.Start();
                 }
                 else
                 {

@@ -49,7 +49,10 @@ namespace Unity.ProjectAuditor.Editor
             if (m_GroupByDescription)
             {
                 var descriptors = issues.Select(i => i.descriptor).Distinct();
-                m_TreeViewItemGroups = new List<IssueTableItem>(descriptors.Count());
+                if (m_TreeViewItemGroups == null)
+                {
+                    m_TreeViewItemGroups = new List<IssueTableItem>(descriptors.Count());
+                }
 
                 foreach (var descriptor in descriptors)
                 {
@@ -58,7 +61,11 @@ namespace Unity.ProjectAuditor.Editor
                 }
             }
 
-            m_TreeViewItemIssues = new List<IssueTableItem>(issues.Length);
+            if (m_TreeViewItemIssues == null)
+            {
+                m_TreeViewItemIssues = new List<IssueTableItem>(issues.Length);
+            }
+
             foreach (var issue in issues)
             {
                 var depth = m_GroupByDescription ? 1 : 0;

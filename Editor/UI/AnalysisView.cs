@@ -102,11 +102,11 @@ namespace Unity.ProjectAuditor.Editor
                 m_Filter);
         }
 
-        public void AddIssues(ProjectReport projectReport)
+        public void AddIssues(IEnumerable<ProjectIssue> issues)
         {
             if (m_Table == null)
                 return;
-            m_Table.AddIssues(projectReport.GetIssues(m_Desc.category));
+            m_Table.AddIssues(issues.Where(i => i.category == m_Desc.category).ToArray());
         }
 
         public void OnGUI(ProjectReport projectReport)

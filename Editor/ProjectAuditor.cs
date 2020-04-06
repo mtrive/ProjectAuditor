@@ -39,7 +39,7 @@ namespace Unity.ProjectAuditor.Editor
             }
 
             m_Auditors.Add(new ScriptAuditor(config));
-            //    m_Auditors.Add(new SettingsAuditor(config));
+            m_Auditors.Add(new SettingsAuditor(config));
             // Add more Auditors here...
 
             LoadDatabase();
