@@ -42,30 +42,35 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
             using (var compilationHelper = new AssemblyCompilationHelper())
             {
+                var callCrawler = new CallCrawler();
                 var compiledAssemblyPaths = compilationHelper.Compile(progressBar).Select(Path.GetFullPath);
-                if (m_Config.enableBackgroundAnalysis && AssemblyHelper.IsPackageInfoAvailable())
+
+                var localAssemblyPaths = compiledAssemblyPaths.Where(path => !AssemblyHelper.IsAssemblyFromReadOnlyPackage(Path.GetFileName(path))).ToArray();
+                var readOnlyAssemblyPaths = compiledAssemblyPaths.Where(path => AssemblyHelper.IsAssemblyFromReadOnlyPackage(Path.GetFileName(path))).ToArray();
+
+                // first phase: analyze assemblies generated from editable scripts
+                AnalyzeAssemblies(localAssemblyPaths, onIssueFound, null, callCrawler, progressBar);
+
+                // second phase: analyze all remaining assemblies, in a separate thread if enableBackgroundAnalysis is enabled
+                if (m_Config.enableBackgroundAnalysis)
                 {
-                    // var user = compiledAssemblyPaths.Where(a =>
-                    //     !AssemblyHelper.IsPackageAssembly(a));
-
-                    AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete, progressBar);
-
-                    // m_AssemblyAnalysisThread = new Thread(() => AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete));
-                    // m_AssemblyAnalysisThread.Name = "Assembly Analysis";
-                    // m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
-                    // m_AssemblyAnalysisThread.Start();
+                    m_AssemblyAnalysisThread = new Thread(() =>
+                        AnalyzeAssemblies(readOnlyAssemblyPaths, onIssueFound, onComplete, callCrawler));
+                    m_AssemblyAnalysisThread.Name = "Assembly Analysis";
+                    m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
+                    m_AssemblyAnalysisThread.Start();
                 }
                 else
                 {
-                    AnalyzeAssemblies(compiledAssemblyPaths, onIssueFound, onComplete, progressBar);
+                    AnalyzeAssemblies(readOnlyAssemblyPaths, onIssueFound, onComplete, callCrawler, progressBar);
                 }
             }
         }
 
-        private void AnalyzeAssemblies(IEnumerable<string> compiledAssemblyPaths, Action<ProjectIssue> onIssueFound, Action onComplete, IProgressBar progressBar = null)
+        private void AnalyzeAssemblies(IEnumerable<string> assemblyPaths, Action<ProjectIssue> onIssueFound, Action onComplete, CallCrawler callCrawler, IProgressBar progressBar = null)
         {
-            var compiledAssemblyDirectories = compiledAssemblyPaths.Select(Path.GetDirectoryName).Distinct();
-            var callCrawler = new CallCrawler();
+            var compiledAssemblyDirectories = assemblyPaths.Select(Path.GetDirectoryName).Distinct();
+
             var issues = new List<ProjectIssue>();
             using (var assemblyResolver = new DefaultAssemblyResolver())
             {
@@ -80,10 +85,10 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
                 if (progressBar != null)
                     progressBar.Initialize("Analyzing Scripts", "Analyzing project scripts",
-                        compiledAssemblyPaths.Count());
+                        assemblyPaths.Count());
 
                 // Analyse all Player assemblies
-                foreach (var assemblyPath in compiledAssemblyPaths)
+                foreach (var assemblyPath in assemblyPaths)
                 {
                     if (progressBar != null)
                         progressBar.AdvanceProgressBar(string.Format("Analyzing {0} scripts",
@@ -107,9 +112,11 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             if (progressBar != null)
                 progressBar.ClearProgressBar();
 
-            callCrawler.BuildCallHierarchies(issues, progressBar);
-
-            onComplete();
+            if (onComplete != null)
+            {
+                callCrawler.BuildCallHierarchies(issues, progressBar);
+                onComplete();
+            }
         }
 
         public void LoadDatabase(string path)

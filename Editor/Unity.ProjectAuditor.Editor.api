@@ -72,7 +72,7 @@ namespace Unity.ProjectAuditor.Editor
         public Unity.ProjectAuditor.Editor.ProjectAuditorConfig config { get; set; }
         public ProjectAuditor() {}
         public Unity.ProjectAuditor.Editor.ProjectReport Audit(Unity.ProjectAuditor.Editor.IProgressBar progressBar = default(Unity.ProjectAuditor.Editor.IProgressBar));
-        public void Audit(System.Action<Unity.ProjectAuditor.Editor.ProjectIssue> onIssueFound, System.Action onComplete, Unity.ProjectAuditor.Editor.IProgressBar progressBar = default(Unity.ProjectAuditor.Editor.IProgressBar));
+        public void Audit(System.Action<Unity.ProjectAuditor.Editor.ProjectIssue> onIssueFound, System.Action<bool> onUpdate, Unity.ProjectAuditor.Editor.IProgressBar progressBar = default(Unity.ProjectAuditor.Editor.IProgressBar));
         public T GetAuditor<T>() where T : class;
         public void LoadDatabase();
         public void LoadDatabase(string path);
@@ -273,6 +273,7 @@ namespace Unity.ProjectAuditor.Editor.Utils
         public static System.Collections.Generic.IEnumerable<string> GetPrecompiledAssemblyPaths();
         [System.Runtime.CompilerServices.IteratorStateMachine(typeof(Unity.ProjectAuditor.Editor.Utils.AssemblyHelper.<GetPrecompiledEngineAssemblyDirectories>d__6))] public static System.Collections.Generic.IEnumerable<string> GetPrecompiledEngineAssemblyDirectories();
         public static System.Collections.Generic.IEnumerable<string> GetPrecompiledEngineAssemblyPaths();
+        public static bool IsAssemblyFromReadOnlyPackage(string assemblyName);
         public static bool IsModuleAssembly(string assemblyName);
         public static bool IsPackageAssembly(string assemblyName);
         public static bool IsPackageInfoAvailable();

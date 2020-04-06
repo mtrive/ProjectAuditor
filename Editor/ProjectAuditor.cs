@@ -75,14 +75,14 @@ namespace Unity.ProjectAuditor.Editor
             var projectReport = new ProjectReport();
             var completed = false;
 
-            Audit(projectReport.AddIssue, () => { completed = true; }, progressBar);
+            Audit(projectReport.AddIssue, (_completed) => { completed = _completed; }, progressBar);
 
             while (!completed)
                 Thread.Sleep(50);
             return projectReport;
         }
 
-        public void Audit(Action<ProjectIssue> onIssueFound, Action onComplete, IProgressBar progressBar = null)
+        public void Audit(Action<ProjectIssue> onIssueFound, Action<bool> onUpdate, IProgressBar progressBar = null)
         {
             var stopwatch = Stopwatch.StartNew();
 
@@ -94,6 +94,8 @@ namespace Unity.ProjectAuditor.Editor
                 {
                     if (config.logTimingsInfo) Debug.Log(auditor.GetType().Name + " took: " + (stopwatch.ElapsedMilliseconds - startTime) / 1000.0f + " seconds.");
 
+                    onUpdate(false);
+
                     numAuditors--;
                     // check if all auditors completed
                     if (numAuditors == 0)
@@ -102,7 +104,7 @@ namespace Unity.ProjectAuditor.Editor
                         if (config.logTimingsInfo)
                             Debug.Log("Project Auditor took: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
 
-                        onComplete();
+                        onUpdate(true);
                     }
                 }, progressBar);
             }

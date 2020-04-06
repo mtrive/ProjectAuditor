@@ -207,9 +207,11 @@ namespace Unity.ProjectAuditor.Editor
             m_ShouldRefresh = true;
             m_AnalysisState = AnalysisState.InProgress;
             m_ProjectReport = new ProjectReport();
+            foreach (var view in m_AnalysisViews)
+            {
+                view.m_Table.Reset();
+            }
 
-            const int numIssuesForRefresh = 50;
-            var numNewIssues = 0;
             var newIssues = new List<ProjectIssue>();
 
             try
@@ -218,40 +220,21 @@ namespace Unity.ProjectAuditor.Editor
                 {
                     newIssues.Add(projectIssue);
                     m_ProjectReport.AddIssue(projectIssue);
-
-                    // only refresh UI every N issues
-                    // if (++numNewIssues % numIssuesForRefresh == 0)
-                    // {
-                    //     foreach (var view in m_AnalysisViews)
-                    //     {
-                    //         view.AddIssues(newIssues);
-                    //     }
-                    //
-                    //     newIssues.Clear();
-                    //     m_ShouldRefresh = true;
-                    // }
                 },
-                    () =>
+                    (bool completed) =>
                     {
-                        // add final batch of issues
+                        // add batch of issues
                         foreach (var view in m_AnalysisViews)
                         {
                             view.AddIssues(newIssues);
                         }
                         newIssues.Clear();
 
-                        m_AnalysisState = AnalysisState.Completed;
+                        if (completed)
+                            m_AnalysisState = AnalysisState.Completed;
+                        m_ShouldRefresh = true;
                     },
                     new ProgressBarDisplay());
-
-                // add initial batch of issues
-                foreach (var view in m_AnalysisViews)
-                {
-                    view.AddIssues(newIssues);
-                }
-                newIssues.Clear();
-
-                RefreshDisplay();
             }
             catch (AssemblyCompilationException e)
             {
@@ -831,26 +814,25 @@ namespace Unity.ProjectAuditor.Editor
         {
             EditorGUILayout.BeginHorizontal(GUI.skin.box);
             {
-                if (m_AnalysisState == AnalysisState.Valid || m_AnalysisState == AnalysisState.NotStarted)
-                {
-                    if (GUILayout.Button(Styles.AnalyzeButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
-                        Analyze();
-                }
-                else
-                {
-                    GUI.enabled = false;
-                    GUILayout.Button(Styles.AnalysisInProgressButton, GUILayout.ExpandWidth(true), GUILayout.Width(80));
-                    GUI.enabled = true;
-                }
+                GUI.enabled = (m_AnalysisState == AnalysisState.Valid || m_AnalysisState == AnalysisState.NotStarted);
 
-                GUI.enabled = IsAnalysisValid();
+                if (GUILayout.Button(Styles.AnalyzeButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
+                    Analyze();
+
+                GUI.enabled = m_AnalysisState == AnalysisState.Valid;
+
                 if (GUILayout.Button(Styles.ExportButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
                     Export();
+
                 GUI.enabled = true;
 
                 if (m_DeveloperMode)
                     if (GUILayout.Button(Styles.ReloadButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
                         Reload();
+                if (m_AnalysisState == AnalysisState.InProgress)
+                {
+                    GUILayout.Label(Styles.AnalysisInProgressLabel, GUILayout.ExpandWidth(true));
+                }
             }
             EditorGUILayout.EndHorizontal();
         }
@@ -918,8 +900,8 @@ namespace Unity.ProjectAuditor.Editor
             public static readonly GUIContent AnalyzeButton =
                 new GUIContent("Analyze", "Analyze Project and list all issues found.");
 
-            public static readonly GUIContent AnalysisInProgressButton =
-                new GUIContent("In Progress", "Analysis in progress...please wait.");
+            public static readonly GUIContent AnalysisInProgressLabel =
+                new GUIContent("Analysis in progress", "Analysis in progress...please wait.");
 
 
             public static readonly GUIContent ReloadButton =
