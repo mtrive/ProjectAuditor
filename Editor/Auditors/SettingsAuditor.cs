@@ -4,9 +4,9 @@ using System.Linq;
 using Unity.ProjectAuditor.Editor.SettingsAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor.Macros;
+using UnityEngine;
 using Assembly = System.Reflection.Assembly;
 using Attribute = Unity.ProjectAuditor.Editor.SettingsAnalyzers.Attribute;
-using Debug = UnityEngine.Debug;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
 {
@@ -138,7 +138,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                             AddIssue(descriptor, string.Format("{0}: {1}", descriptor.description, value), onIssueFound);
                         }
 
-                        // Eval did not throw exception so we can stop iterating
+                        // Eval did not throw exception so we can stop iterating assemblies
                         found = true;
                         break;
                     }
