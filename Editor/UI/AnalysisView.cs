@@ -12,6 +12,7 @@ namespace Unity.ProjectAuditor.Editor
         public string name;
         public bool groupByDescription;
         public bool showAssemblySelection;
+        public bool showCritical;
         public bool showInvertedCallTree;
         public bool showFilenameColumn;
         public bool showAssemblyColumn;
@@ -45,20 +46,23 @@ namespace Unity.ProjectAuditor.Editor
 
             var state = new TreeViewState();
             var columnsList = new List<MultiColumnHeaderState.Column>();
-            var numColumns = (int) IssueTable.Column.Count;
+            var numColumns = (int)IssueTable.Column.Count;
             for (var i = 0; i < numColumns; i++)
             {
                 var width = 0;
                 var minWidth = 0;
-                switch ((IssueTable.Column) i)
+                switch ((IssueTable.Column)i)
                 {
                     case IssueTable.Column.Description:
                         width = 300;
                         minWidth = 100;
                         break;
                     case IssueTable.Column.Priority:
-                        width = 22;
-                        minWidth = 22;
+                        if (m_Desc.showCritical)
+                        {
+                            width = 22;
+                            minWidth = 22;
+                        }
                         break;
                     case IssueTable.Column.Area:
                         width = 60;
@@ -98,7 +102,7 @@ namespace Unity.ProjectAuditor.Editor
                 m_Filter);
         }
 
-        public void SetData(ProjectReport projectReport)
+        public void AddIssues(ProjectReport projectReport)
         {
             if (m_Table == null)
                 return;
@@ -107,13 +111,14 @@ namespace Unity.ProjectAuditor.Editor
 
         public void OnGUI(ProjectReport projectReport)
         {
+            var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
+            m_Table.OnGUI(r);
+
             var issues = projectReport.GetIssues(m_Desc.category).Where(m_Filter.ShouldDisplay);
             var selectedItems = m_Table.GetSelectedItems();
             var selectedIssues = selectedItems.Select(i => i.ProjectIssue).ToArray();
             var info = selectedIssues.Length + " / " + issues.Count() + " issues";
 
-            var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
-            m_Table.OnGUI(r);
             EditorGUILayout.LabelField(info, GUILayout.ExpandWidth(true), GUILayout.Width(200));
         }
 

@@ -39,7 +39,7 @@ namespace Unity.ProjectAuditor.Editor
             }
 
             m_Auditors.Add(new ScriptAuditor(config));
-            m_Auditors.Add(new SettingsAuditor(config));
+            //    m_Auditors.Add(new SettingsAuditor(config));
             // Add more Auditors here...
 
             LoadDatabase();
@@ -73,11 +73,11 @@ namespace Unity.ProjectAuditor.Editor
         public ProjectReport Audit(IProgressBar progressBar = null)
         {
             var projectReport = new ProjectReport();
+            var completed = false;
 
-            bool completed = false;
             Audit(projectReport.AddIssue, () => { completed = true; }, progressBar);
 
-            while(!completed)
+            while (!completed)
                 Thread.Sleep(50);
             return projectReport;
         }
@@ -108,7 +108,7 @@ namespace Unity.ProjectAuditor.Editor
             }
             Debug.Log("Project Auditor time to interactive: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
         }
-        
+
         public T GetAuditor<T>() where T : class
         {
             foreach (var iauditor in m_Auditors)
@@ -150,6 +150,7 @@ namespace Unity.ProjectAuditor.Editor
                 }
             }
         }
+
 #endif
     }
 }

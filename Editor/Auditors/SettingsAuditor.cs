@@ -53,8 +53,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             m_ProblemDescriptors = ProblemDescriptorHelper.LoadProblemDescriptors(path, "ProjectSettings");
 
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            foreach (var type in GetAnalyzerTypes(assembly))
-                AddAnalyzer(Activator.CreateInstance(type, this) as ISettingsAnalyzer);
+                foreach (var type in GetAnalyzerTypes(assembly))
+                    AddAnalyzer(Activator.CreateInstance(type, this) as ISettingsAnalyzer);
         }
 
         public IEnumerable<Type> GetAnalyzerTypes(Assembly assembly)
@@ -72,41 +72,29 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         public void Audit(Action<ProjectIssue> onIssueFound, Action onComplete, IProgressBar progressBar = null)
         {
             if (progressBar != null)
-                progressBar.Initialize("Analyzing Settings", "Analyzing project settings", m_SettingsAnalyzers.Count);
+                progressBar.Initialize("Analyzing Settings", "Analyzing project settings", m_ProblemDescriptors.Count);
 
-            foreach (var keyValuePair in m_SettingsAnalyzers)
+            foreach (var descriptor in m_ProblemDescriptors)
             {
                 if (progressBar != null)
                     progressBar.AdvanceProgressBar();
 
-                var projectIssue = keyValuePair.Value.Analyze();
-                if (projectIssue != null) onIssueFound(projectIssue);             
+                if (m_SettingsAnalyzers.ContainsKey(descriptor.id))
+                {
+                    var analyzer = m_SettingsAnalyzers[descriptor.id];
+                    var projectIssue = analyzer.Analyze();
+                    if (projectIssue != null) onIssueFound(projectIssue);
+                }
+                else
+                {
+                    SearchAndEval(descriptor, onIssueFound);
+                }
             }
 
-            AnalyzeSettings(onIssueFound, progressBar);
-            
             if (progressBar != null)
                 progressBar.ClearProgressBar();
 
             onComplete();
-        }
-
-        private void AnalyzeSettings(Action<ProjectIssue> onIssueFound, IProgressBar progressBar = null)
-        {
-            var descriptors = m_ProblemDescriptors.Where(descriptor => !m_SettingsAnalyzers.ContainsKey(descriptor.id));
-
-            if (progressBar != null)
-                progressBar.Initialize("Analyzing Settings", "Analyzing project settings", descriptors.Count());
-
-            foreach (var descriptor in descriptors)
-            {
-                if (progressBar != null)
-                    progressBar.AdvanceProgressBar();
-
-                SearchAndEval(descriptor, onIssueFound);
-            }
-            if (progressBar != null)
-                progressBar.ClearProgressBar();
         }
 
         private void AddAnalyzer(ISettingsAnalyzer analyzer)
@@ -121,20 +109,21 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             if (mappings.Count() > 0)
                 projectWindowPath = mappings.First().Value;
             onIssueFound(new ProjectIssue
-            (
-                descriptor,
-                description,
-                IssueCategory.ProjectSettings,
-                new Location {path = projectWindowPath}
-            ));
+                (
+                    descriptor,
+                    description,
+                    IssueCategory.ProjectSettings,
+                    new Location {path = projectWindowPath}
+                )
+            );
         }
 
         private void SearchAndEval(ProblemDescriptor descriptor, Action<ProjectIssue> onIssueFound)
         {
             if (string.IsNullOrEmpty(descriptor.customevaluator))
             {
-                var paramTypes = new Type[0] { };
-                var args = new object[0] { };
+                var paramTypes = new Type[0] {};
+                var args = new object[0] {};
                 var found = false;
 
                 // do we actually need to look in all assemblies? Maybe we can find a way to only evaluate on the right assembly
@@ -143,7 +132,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     {
                         var value = MethodEvaluator.Eval(assembly.Location,
                             descriptor.type, "get_" + descriptor.method, paramTypes, args);
-                        
+
                         if (value.ToString() == descriptor.value)
                         {
                             AddIssue(descriptor, string.Format("{0}: {1}", descriptor.description, value), onIssueFound);
@@ -165,7 +154,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             {
                 var helperType = m_Helpers.GetType();
                 var theMethod = helperType.GetMethod(descriptor.customevaluator);
-                var isIssue = (bool) theMethod.Invoke(m_Helpers, null);
+                var isIssue = (bool)theMethod.Invoke(m_Helpers, null);
                 if (isIssue) AddIssue(descriptor, descriptor.description, onIssueFound);
             }
         }

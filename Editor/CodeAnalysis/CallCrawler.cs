@@ -60,7 +60,7 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
                     var depth = 0;
                     var callTree = issue.callTree;
                     BuildHierarchy(callTree.GetChild(), depth);
-                    
+
                     // temp fix for null location (ScriptAuditor was unable to get sequence point)
                     if (issue.location == null && callTree.HasChildren())
                     {
@@ -68,7 +68,7 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
                     }
                 }
                 if (progressBar != null)
-                    progressBar.ClearProgressBar();                
+                    progressBar.ClearProgressBar();
             }
         }
 
