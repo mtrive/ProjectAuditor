@@ -40,52 +40,51 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             if (m_Config.enableBackgroundAnalysis && m_AssemblyAnalysisThread != null)
                 m_AssemblyAnalysisThread.Join();
 
-            using (var compilationHelper = new AssemblyCompilationHelper())
+            var compilationHelper = new AssemblyCompilationHelper();
+            var callCrawler = new CallCrawler();
+            var compiledAssemblyPaths = compilationHelper.Compile(progressBar).Select(Path.GetFullPath);
+            var issues = new List<ProjectIssue>();
+
+            var assemblyInfos = compiledAssemblyPaths.Select(path => new
             {
-                var callCrawler = new CallCrawler();
-                var compiledAssemblyPaths = compilationHelper.Compile(progressBar).Select(Path.GetFullPath);
-                var issues = new List<ProjectIssue>();
+                path, readOnly = AssemblyHelper.IsAssemblyFromReadOnlyPackage(Path.GetFileName(path))
+            });
+            var localAssemblyPaths = assemblyInfos.Where(info => !info.readOnly).Select(info => info.path).ToArray();
+            var readOnlyAssemblyPaths = assemblyInfos.Where(info => info.readOnly).Select(info => info.path).ToArray();
 
-                var assemblyInfos = compiledAssemblyPaths.Select(path => new
-                {
-                    path, readOnly = AssemblyHelper.IsAssemblyFromReadOnlyPackage(Path.GetFileName(path))
-                });
-                var localAssemblyPaths = assemblyInfos.Where(info => !info.readOnly).Select(info => info.path).ToArray();
-                var readOnlyAssemblyPaths = assemblyInfos.Where(info => info.readOnly).Select(info => info.path).ToArray();
+            void onCallFound(CallPair pair)
+            {
+                callCrawler.Add(pair);
+            }
 
-                void onCallFound(CallPair pair)
-                {
-                    callCrawler.Add(pair);
-                }
+            void onCompleteInternal(IProgressBar _progressBar)
+            {
+                compilationHelper.Dispose();
+                callCrawler.BuildCallHierarchies(issues, _progressBar);
+                onComplete();
+            }
 
-                void onCompleteInternal(IProgressBar _progressBar)
-                {
-                    callCrawler.BuildCallHierarchies(issues, _progressBar);
-                    onComplete();
-                }
+            void onIssueFoundInternal(ProjectIssue issue)
+            {
+                issues.Add(issue);
+                onIssueFound(issue);
+            }
 
-                void onIssueFoundInternal(ProjectIssue issue)
-                {
-                    issues.Add(issue);
-                    onIssueFound(issue);
-                }
+            // first phase: analyze assemblies generated from editable scripts
+            AnalyzeAssemblies(localAssemblyPaths, onCallFound, onIssueFoundInternal, null, progressBar);
 
-                // first phase: analyze assemblies generated from editable scripts
-                AnalyzeAssemblies(localAssemblyPaths, onCallFound, onIssueFoundInternal, null, progressBar);
-
-                // second phase: analyze all remaining assemblies, in a separate thread if enableBackgroundAnalysis is enabled
-                if (m_Config.enableBackgroundAnalysis)
-                {
-                    m_AssemblyAnalysisThread = new Thread(() =>
-                        AnalyzeAssemblies(readOnlyAssemblyPaths, onCallFound, onIssueFound, onCompleteInternal));
-                    m_AssemblyAnalysisThread.Name = "Assembly Analysis";
-                    m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
-                    m_AssemblyAnalysisThread.Start();
-                }
-                else
-                {
-                    AnalyzeAssemblies(readOnlyAssemblyPaths, onCallFound, onIssueFoundInternal, onCompleteInternal, progressBar);
-                }
+            // second phase: analyze all remaining assemblies, in a separate thread if enableBackgroundAnalysis is enabled
+            if (m_Config.enableBackgroundAnalysis)
+            {
+                m_AssemblyAnalysisThread = new Thread(() =>
+                    AnalyzeAssemblies(readOnlyAssemblyPaths, onCallFound, onIssueFound, onCompleteInternal));
+                m_AssemblyAnalysisThread.Name = "Assembly Analysis";
+                m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
+                m_AssemblyAnalysisThread.Start();
+            }
+            else
+            {
+                AnalyzeAssemblies(readOnlyAssemblyPaths, onCallFound, onIssueFoundInternal, onCompleteInternal, progressBar);
             }
         }
 
