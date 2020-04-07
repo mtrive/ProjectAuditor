@@ -555,15 +555,13 @@ namespace Unity.ProjectAuditor.Editor
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(Styles.assemblyFilter, GUILayout.Width(LayoutSize.FilterOptionsLeftLabelWidth));
 
-            if (m_AssemblyNames != null && m_AssemblyNames.Length > 0)
+            var lastEnabled = GUI.enabled;
+
+            GUI.enabled = m_AnalysisState == AnalysisState.Valid && !AssemblySelectionWindow.IsOpen() && m_ActiveAnalysisView.desc.showAssemblySelection;
+            if (GUILayout.Button(Styles.assemblyFilterSelect, EditorStyles.miniButton,
+                GUILayout.Width(LayoutSize.FilterOptionsEnumWidth)))
             {
-                var lastEnabled = GUI.enabled;
-                // SteveM TODO - We don't currently have any sense of when the Auditor is busy and should disallow user input
-                var enabled = /*!IsAnalysisRunning() &&*/
-                    !AssemblySelectionWindow.IsOpen() && m_ActiveAnalysisView.desc.showAssemblySelection;
-                GUI.enabled = enabled;
-                if (GUILayout.Button(Styles.assemblyFilterSelect, EditorStyles.miniButton,
-                    GUILayout.Width(LayoutSize.FilterOptionsEnumWidth)))
+                if (m_AssemblyNames != null && m_AssemblyNames.Length > 0)
                 {
                     // Note: Window auto closes as it loses focus so this isn't strictly required
                     if (AssemblySelectionWindow.IsOpen())
@@ -748,14 +746,14 @@ namespace Unity.ProjectAuditor.Editor
             if (!m_AssemblySelection.selection.Any())
             {
                 // initial selection setup:
-                // - non-package assembly, or
+                // - assemblies from user scripts or editable packages, or
                 // - default assembly, or,
                 // - all generated assemblies
 
                 var compiledAssemblies = m_AssemblyNames.Where(a => !AssemblyHelper.IsModuleAssembly(a));
                 if (AssemblyHelper.IsPackageInfoAvailable())
                     compiledAssemblies = compiledAssemblies.Where(a =>
-                        !AssemblyHelper.IsPackageAssembly(a));
+                        !AssemblyHelper.IsAssemblyFromReadOnlyPackage(a));
                 m_AssemblySelection.selection.AddRange(compiledAssemblies);
 
                 if (!m_AssemblySelection.selection.Any())
