@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -86,8 +87,10 @@ namespace Unity.ProjectAuditor.Editor
             {
                 var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                 m_ProjectAuditorWindow.SetAreaSelection(m_AreaTable.GetTreeViewSelection());
-                // stephenm TODO - we need much more data in the payload here!
-                ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.AreaSelectApply, analytic);
+
+                var payload = new Dictionary<string, string>();
+                payload["areas"] = m_ProjectAuditorWindow.GetSelectedAreasSummary();
+                ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.AreaSelectApply, analytic, payload);
             }
 
             EditorGUILayout.EndHorizontal();

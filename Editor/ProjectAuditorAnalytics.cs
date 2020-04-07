@@ -12,7 +12,7 @@ namespace Unity.ProjectAuditor.Editor
         const int k_MaxEventsPerHour = 100;
         const int k_MaxEventItems = 1000;
         const string k_VendorKey = "unity.projectauditor";
-        const string k_EventTopicName = "usability";
+        const string k_EventTopicName = "projectAuditorUsage";
 
         static bool s_EnableAnalytics = false;
 
@@ -37,215 +37,133 @@ namespace Unity.ProjectAuditor.Editor
             AreaSelectApply,
             Mute,
             Unmute,
-            ShowMuted
+            ShowMuted,
+            OnlyCriticalIssues,
         };
 
-        // public enum UIUsageMode
-        // {
-        //     Single,
-        //     Comparison,
-        // };
-
-        public enum UIVisibility
-        {
-            FrameTimeContextMenu,
-            Filters,
-            TopTen,
-            Frames,
-            Threads,
-            Markers,
-        };
-
-        public enum UIResizeView
-        {
-            Single,
-            Comparison,
-        };
-
-
-        [Serializable]
-        struct ProjectAuditorUIButtonEventParameters
-        {
-            public string name;
-
-            public ProjectAuditorUIButtonEventParameters(string name)
-            {
-                this.name = name;
-            }
-        }
+        // -------------------------------------------------------------------------------------------------------------
 
         // camelCase since these events get serialized to Json and naming convention in analytics is camelCase
         [Serializable]
         struct ProjectAuditorUIButtonEvent
         {
-            public ProjectAuditorUIButtonEvent(string name, float durationInTicks)
+            [Serializable]
+            public struct EventKeyValue
             {
-                subtype = "profileAnalyzerUIButton";
-
-                // ts is auto added so no need to include it here
-                //ts = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-                this.duration = durationInTicks;
-
-                parameters = new ProjectAuditorUIButtonEventParameters(name);
+                public string key;
+                public string value;
             }
 
-            public string subtype;
-            //public int ts;
-            public float duration;  // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-            public ProjectAuditorUIButtonEventParameters parameters;
-        }
+            public string action;    // Name of the buttom
+            public bool blocking;    // Was this action blocking? (True for all events in Project Auditor, at least until background analysis is implemented)
 
-        // [Serializable]
-        // struct ProjectAuditorUIUsageEventParameters
-        // {
-        //     public string name;
-        //
-        //     public ProjectAuditorUIUsageEventParameters(string name)
-        //     {
-        //         this.name = name;
-        //     }
-        // }
-        //
-        // [Serializable]
-        // struct ProjectAuditorUIUsageEvent
-        // {
-        //     public ProjectAuditorUIUsageEvent(string name, float durationInTicks)
-        //     {
-        //         subtype = "profileAnalyzerModeUsage";
-        //
-        //         this.duration = durationInTicks;
-        //
-        //         parameters = new ProjectAuditorUIUsageEventParameters(name);
-        //     }
-        //
-        //     public string subtype;
-        //     public float duration;  // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-        //     public ProjectAuditorUIUsageEventParameters parameters;
-        // }
+            //public Dictionary<string, string> action_params; // Custom data for specific event payloads
+            public EventKeyValue[] action_params;
 
-        [Serializable]
-        struct ProjectAuditorUIVisibilityEventParameters
-        {
-            public string name;
-            public bool show;
+            public Int64 t_since_start; // Time since app start (in microseconds)
+            public Int64 duration; // Duration of event in ticks - 100-nanosecond intervals.
+            public Int64 ts; //Timestamp (milliseconds epoch) when action started.
 
-            public ProjectAuditorUIVisibilityEventParameters(string name, bool show)
+            public ProjectAuditorUIButtonEvent(string name, Analytic analytic, Dictionary<string, string> payload)
             {
-                this.name = name;
-                this.show = show;
-            }
-        }
+                action = name;
+                blocking = analytic.GetBlocking();
 
-        [Serializable]
-        struct ProjectAuditorUIVisibilityEvent
-        {
-            public ProjectAuditorUIVisibilityEvent(string name, float durationInTicks, bool show)
-            {
-                subtype = "profileAnalyzerUIVisibility";
+                // Convert dictionary to a serializable array of key/value pairs
+                if (payload != null && payload.Count > 0)
+                {
+                    action_params = new EventKeyValue[payload.Count];
+                    int i = 0;
+                    foreach (KeyValuePair<string, string> kvp in payload)
+                    {
+                        action_params[i].key = kvp.Key;
+                        action_params[i].value = kvp.Value;
+                        ++i;
+                    }
+                }
+                else
+                {
+                    action_params = null;
+                }
 
-                this.duration = durationInTicks;
-
-                parameters = new ProjectAuditorUIVisibilityEventParameters(name, show);
+                t_since_start = SecondsToMicroseconds(analytic.GetStartTime());
+                duration = SecondsToTicks(analytic.GetDurationInSeconds());
+                ts = analytic.GetTimestamp();
             }
 
-            public string subtype;
-            public float duration;  // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-            public ProjectAuditorUIVisibilityEventParameters parameters;
-        }
-
-        [Serializable]
-        struct ProjectAuditorUIResizeEventParameters
-        {
-            public string name;
-            public float width;
-            public float height;
-            public float screenWidth;
-            public float screenHeight;
-            public bool docked;
-
-            public ProjectAuditorUIResizeEventParameters(string name, float width, float height, float screenWidth, float screenHeight, bool isDocked)
+            static Int64 SecondsToMilliseconds(float seconds)
             {
-                this.name = name;
-                this.width = width;
-                this.height = height;
-                this.screenWidth = screenWidth;
-                this.screenHeight = screenHeight;
-                docked = isDocked;
+                return (Int64)(seconds * 1000);
+            }
+
+            static Int64 SecondsToTicks(float durationInSeconds)
+            {
+                return (Int64)(durationInSeconds * 10000);
+            }
+
+            static Int64 SecondsToMicroseconds(double seconds)
+            {
+                return (Int64)(seconds * 1000000);
             }
         }
 
-        [Serializable]
-        struct ProjectAuditorUIResizeEvent
+        // -------------------------------------------------------------------------------------------------------------
+
+        static public bool SendUIButtonEvent(UIButton uiButton, Analytic analytic, Dictionary<string, string> payload = null)
         {
-            public ProjectAuditorUIResizeEvent(string name, float durationInTicks, float width, float height, float screenWidth, float screenHeight, bool isDocked)
-            {
-                subtype = "profileAnalyzerUIResize";
+            analytic.End();
 
-                this.duration = durationInTicks;
-
-                parameters = new ProjectAuditorUIResizeEventParameters(name, width, height, screenWidth, screenHeight, isDocked);
-            }
-
-            public string subtype;
-            public float duration;  // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-            public ProjectAuditorUIResizeEventParameters parameters;
-        }
-
-        static float SecondsToTicks(float durationInSeconds)
-        {
-            return durationInSeconds * 10000;
-        }
-
-        public static bool SendUIButtonEvent(UIButton uiButton, float durationInSeconds)
-        {
             if (!s_EnableAnalytics)
                 return false;
 
 #if UNITY_2018_1_OR_NEWER
             // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-            float durationInTicks = SecondsToTicks(durationInSeconds);
-
-            ProjectAuditorUIButtonEvent uiButtonEvent;
+            //float durationInTicks = SecondsToTicks(durationInSeconds);
+            string buttonName = "";
             switch (uiButton)
             {
                 case UIButton.Analyze:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorAnalyze", durationInTicks);
+                    buttonName = "analyze_button_click";
                     break;
                 case UIButton.Export:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorExport", durationInTicks);
+                    buttonName = "export_button_click";
                     break;
                 case UIButton.ApiCalls:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorApiCalls", durationInTicks);
+                    buttonName = "api_tab";
                     break;
                 case UIButton.ProjectSettings:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorProjectSettings", durationInTicks);
+                    buttonName = "settings_tab";
                     break;
                 case UIButton.AssemblySelect:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorAssemblySelect", durationInTicks);
+                    buttonName = "assembly_button_click";
                     break;
                 case UIButton.AssemblySelectApply:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorAssemblyApply", durationInTicks);
+                    buttonName = "assembly_apply";
                     break;
                 case UIButton.AreaSelect:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorAreaSelect", durationInTicks);
+                    buttonName = "area_button_click";
                     break;
                 case UIButton.AreaSelectApply:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorAreaApply", durationInTicks);
+                    buttonName = "area_apply";
                     break;
                 case UIButton.Mute:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorMute", durationInTicks);
+                    buttonName = "mute_button_click";
                     break;
                 case UIButton.Unmute:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorUnmute", durationInTicks);
+                    buttonName = "unmute_button_click";
                     break;
                 case UIButton.ShowMuted:
-                    uiButtonEvent = new ProjectAuditorUIButtonEvent("projectAuditorShowMuted", durationInTicks);
+                    buttonName = "show_muted_checkbox";
+                    break;
+                case UIButton.OnlyCriticalIssues:
+                    buttonName = "only_hotpath_checkbox";
                     break;
                 default:
                     Debug.LogFormat("SendUIButtonEvent: Unsupported button type : {0}", uiButton);
                     return false;
             }
 
+            ProjectAuditorUIButtonEvent uiButtonEvent = new ProjectAuditorUIButtonEvent(buttonName, analytic, payload);
 
             AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
             if (result != AnalyticsResult.Ok)
@@ -257,160 +175,51 @@ namespace Unity.ProjectAuditor.Editor
 #endif
         }
 
-//         public static bool SendUIUsageModeEvent(UIUsageMode uiUsageMode, float durationInSeconds)
-//         {
-//             if (!s_EnableAnalytics)
-//                 return false;
-//
-// #if UNITY_2018_1_OR_NEWER
-//             // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-//             float durationInTicks = SecondsToTicks(durationInSeconds);
-//
-//             ProjectAuditorUIUsageEvent uiUsageEvent;
-//             switch (uiUsageMode)
-//             {
-//                 case UIUsageMode.Single:
-//                     uiUsageEvent = new ProjectAuditorUIUsageEvent("profileAnalyzerSingle", durationInTicks);
-//                     break;
-//                 case UIUsageMode.Comparison:
-//                     uiUsageEvent = new ProjectAuditorUIUsageEvent("profileAnalyzerCompare", durationInTicks);
-//                     break;
-//                 default:
-//                     Debug.LogFormat("SendUsageEvent: Unsupported usage mode : {0}", uiUsageMode);
-//                     return false;
-//             }
-//
-//
-//             AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiUsageEvent);
-//             if (result != AnalyticsResult.Ok)
-//                 return false;
-//
-//             return true;
-// #else
-//             return false;
-// #endif
-//         }
+        // -------------------------------------------------------------------------------------------------------------
+         public class Analytic
+         {
+             private double m_StartTime;
+             private float m_DurationInSeconds;
+             private Int64 m_Timestamp;
+             private bool m_Blocking;
 
-        public static bool SendUIVisibilityEvent(UIVisibility uiVisibility, float durationInSeconds, bool show)
-        {
-            if (!s_EnableAnalytics)
-                return false;
+             public Analytic()
+             {
+                 m_StartTime = EditorApplication.timeSinceStartup;
+                 m_DurationInSeconds = 0;
+                 m_Timestamp = (Int64)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
+                 m_Blocking = true;
+             }
 
-#if UNITY_2018_1_OR_NEWER
-            // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-            float durationInTicks = SecondsToTicks(durationInSeconds);
+             public void End()
+             {
+                 m_DurationInSeconds = (float)(EditorApplication.timeSinceStartup - m_StartTime);
+             }
 
-            ProjectAuditorUIVisibilityEvent uiUsageEvent;
-            switch (uiVisibility)
-            {
-                case UIVisibility.FrameTimeContextMenu:
-                    uiUsageEvent = new ProjectAuditorUIVisibilityEvent("projectAuditorFrameTimeContextMenu", durationInTicks, show);
-                    break;
-                case UIVisibility.Filters:
-                    uiUsageEvent = new ProjectAuditorUIVisibilityEvent("projectAuditorFilters", durationInTicks, show);
-                    break;
-                case UIVisibility.TopTen:
-                    uiUsageEvent = new ProjectAuditorUIVisibilityEvent("projectAuditorTopTen", durationInTicks, show);
-                    break;
-                case UIVisibility.Frames:
-                    uiUsageEvent = new ProjectAuditorUIVisibilityEvent("projectAuditorFrames", durationInTicks, show);
-                    break;
-                case UIVisibility.Threads:
-                    uiUsageEvent = new ProjectAuditorUIVisibilityEvent("projectAuditorThreads", durationInTicks, show);
-                    break;
-                case UIVisibility.Markers:
-                    uiUsageEvent = new ProjectAuditorUIVisibilityEvent("projectAuditorMarkers", durationInTicks, show);
-                    break;
-                default:
-                    Debug.LogFormat("SendUIVisibilityEvent: Unsupported visibililty item : {0}", uiVisibility);
-                    return false;
-            }
+             public double GetStartTime()
+             {
+                 return m_StartTime;
+             }
 
-            AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiUsageEvent);
-            if (result != AnalyticsResult.Ok)
-                return false;
+             public float GetDurationInSeconds()
+             {
+                 return m_DurationInSeconds;
+             }
 
-            return true;
-#else
-            return false;
-#endif
-        }
+             public Int64 GetTimestamp()
+             {
+                 return m_Timestamp;
+             }
 
-        //public static bool SendUIResizeEvent(UIResizeView uiResizeView, float durationInSeconds, float width, float height, bool isDocked)
-        public static bool SendUIResizeEvent(float durationInSeconds, float width, float height, bool isDocked)
-        {
-            if (!s_EnableAnalytics)
-                return false;
+             public bool GetBlocking()
+             {
+                 return m_Blocking;
+             }
+         }
 
-#if UNITY_2018_1_OR_NEWER
-            // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-            float durationInTicks = SecondsToTicks(durationInSeconds);
-
-            ProjectAuditorUIResizeEvent uiResizeEvent =
-                new ProjectAuditorUIResizeEvent("profileAnalyzer", durationInTicks, width, height, 
-                    Screen.currentResolution.width, Screen.currentResolution.height, isDocked);
-            // switch (uiResizeView)
-            // {
-            //     case UIResizeView.Single:
-            //         // Screen.width, Screen.height is game view size
-            //         uiResizeEvent = new ProjectAuditorUIResizeEvent("profileAnalyzerSingle", durationInTicks, width, height, Screen.currentResolution.width, Screen.currentResolution.height, isDocked);
-            //         break;
-            //     case UIResizeView.Comparison:
-            //         uiResizeEvent = new ProjectAuditorUIResizeEvent("profileAnalyzerCompare", durationInTicks, width, height, Screen.currentResolution.width, Screen.currentResolution.height, isDocked);
-            //         break;
-            //     default:
-            //         Debug.LogFormat("SendUIResizeEvent: Unsupported view : {0}", uiResizeView);
-            //         return false;
-            // }
-
-            AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiResizeEvent);
-            if (result != AnalyticsResult.Ok)
-                return false;
-
-            return true;
-#else
-            return false;
-#endif
-        }
-
-
-        public class Analytic
-        {
-            double m_StartTime;
-            float m_DurationInSeconds;
-
-            public Analytic()
-            {
-                m_StartTime = EditorApplication.timeSinceStartup;
-                m_DurationInSeconds = 0;
-            }
-
-            public void End()
-            {
-                m_DurationInSeconds = (float)(EditorApplication.timeSinceStartup - m_StartTime);
-            }
-
-            public float GetDurationInSeconds()
-            {
-                return m_DurationInSeconds;
-            }
-        }
-
-        static public Analytic BeginAnalytic()
-        {
-            return new Analytic();
-        }
-
-        static public void SendUIButtonEvent(UIButton uiButton, Analytic instance)
-        {
-            instance.End();
-            SendUIButtonEvent(uiButton, instance.GetDurationInSeconds());
-        }
-
-        // static public void SendUIUsageModeEvent(UIUsageMode uiUsageMode, Analytic instance)
-        // {
-        //     instance.End();
-        //     SendUIUsageModeEvent(uiUsageMode, instance.GetDurationInSeconds());
-        // }
+         static public Analytic BeginAnalytic()
+         {
+             return new Analytic();
+         }
     }
-}
+ }
