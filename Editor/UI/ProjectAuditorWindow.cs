@@ -213,7 +213,8 @@ namespace Unity.ProjectAuditor.Editor
             if (!IsAnalysisValid())
                 return;
 
-            foreach (var view in m_AnalysisViews) view.CreateTable(m_ProjectReport);
+            foreach (var view in m_AnalysisViews)
+                view.CreateTable(m_ProjectReport);
 
             m_ActiveIssueTable.Reload();
         }
@@ -512,7 +513,7 @@ namespace Unity.ProjectAuditor.Editor
         private void DrawAssemblyFilter()
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(Styles.assemblyFilter, GUILayout.Width(LayoutSize.FilterOptionsLeftLabelWidth));
+            EditorGUILayout.LabelField(Styles.AssemblyFilter, GUILayout.Width(LayoutSize.FilterOptionsLeftLabelWidth));
 
             if (m_AssemblyNames.Length > 0)
             {
@@ -521,7 +522,7 @@ namespace Unity.ProjectAuditor.Editor
                 var enabled = /*!IsAnalysisRunning() &&*/
                     !AssemblySelectionWindow.IsOpen() && m_ActiveAnalysisView.desc.showAssemblySelection;
                 GUI.enabled = enabled;
-                if (GUILayout.Button(Styles.assemblyFilterSelect, EditorStyles.miniButton,
+                if (GUILayout.Button(Styles.AssemblyFilterSelect, EditorStyles.miniButton,
                     GUILayout.Width(LayoutSize.FilterOptionsEnumWidth)))
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
@@ -562,7 +563,7 @@ namespace Unity.ProjectAuditor.Editor
         private void DrawAreaFilter()
         {
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField(Styles.areaFilter, GUILayout.Width(LayoutSize.FilterOptionsLeftLabelWidth));
+            EditorGUILayout.LabelField(Styles.AreaFilter, GUILayout.Width(LayoutSize.FilterOptionsLeftLabelWidth));
 
             if (m_AreaNames.Length > 0)
             {
@@ -570,7 +571,7 @@ namespace Unity.ProjectAuditor.Editor
                 // SteveM TODO - We don't currently have any sense of when the Auditor is busy and should disallow user input
                 var enabled = /*!IsAnalysisRunning() &&*/ !AreaSelectionWindow.IsOpen();
                 GUI.enabled = enabled;
-                if (GUILayout.Button(Styles.areaFilterSelect, EditorStyles.miniButton,
+                if (GUILayout.Button(Styles.AreaFilterSelect, EditorStyles.miniButton,
                     GUILayout.Width(LayoutSize.FilterOptionsEnumWidth)))
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
@@ -633,6 +634,8 @@ namespace Unity.ProjectAuditor.Editor
                 if (m_SearchField == null) m_SearchField = new SearchField();
 
                 m_SearchText = m_SearchField.OnGUI(searchRect, m_SearchText);
+
+                m_ActiveIssueTable.searchString = m_SearchText;
 
                 EditorGUILayout.EndHorizontal();
 
@@ -910,16 +913,16 @@ namespace Unity.ProjectAuditor.Editor
             public static readonly GUIContent ExportButton =
                 new GUIContent("Export", "Export project report to .csv files.");
 
-            public static readonly GUIContent assemblyFilter =
+            public static readonly GUIContent AssemblyFilter =
                 new GUIContent("Assembly : ", "Select assemblies to examine");
 
-            public static readonly GUIContent assemblyFilterSelect =
+            public static readonly GUIContent AssemblyFilterSelect =
                 new GUIContent("Select", "Select assemblies to examine");
 
-            public static readonly GUIContent areaFilter =
+            public static readonly GUIContent AreaFilter =
                 new GUIContent("Area : ", "Select performance areas to display");
 
-            public static readonly GUIContent areaFilterSelect =
+            public static readonly GUIContent AreaFilterSelect =
                 new GUIContent("Select", "Select performance areas to display");
 
             public static readonly GUIContent MuteButton = new GUIContent("Mute", "Always ignore selected issues.");

@@ -106,21 +106,22 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         private void AnalyzeAssembly(string assemblyPath, IAssemblyResolver assemblyResolver,
             CallCrawler callCrawler, Action<ProjectIssue> onIssueFound)
         {
-            using (var a = AssemblyDefinition.ReadAssembly(assemblyPath,
+            using (var assembly = AssemblyDefinition.ReadAssembly(assemblyPath,
                 new ReaderParameters {ReadSymbols = true, AssemblyResolver = assemblyResolver}))
             {
-                foreach (var methodDefinition in MonoCecilHelper.AggregateAllTypeDefinitions(a.MainModule.Types)
+                var assemblyName = assembly.Name.Name;
+                foreach (var methodDefinition in MonoCecilHelper.AggregateAllTypeDefinitions(assembly.MainModule.Types)
                          .SelectMany(t => t.Methods))
                 {
                     if (!methodDefinition.HasBody)
                         continue;
 
-                    AnalyzeMethodBody(a, methodDefinition, callCrawler, onIssueFound);
+                    AnalyzeMethodBody(assemblyName, methodDefinition, callCrawler, onIssueFound);
                 }
             }
         }
 
-        private void AnalyzeMethodBody(AssemblyDefinition a, MethodDefinition caller,
+        private void AnalyzeMethodBody(string assemblyName, MethodDefinition caller,
             CallCrawler callCrawler, Action<ProjectIssue> onIssueFound)
         {
             if (!caller.DebugInformation.HasSequencePoints)
@@ -163,7 +164,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                             projectIssue.callTree.perfCriticalContext = perfCriticalContext;
                             projectIssue.callTree.AddChild(callerNode);
                             projectIssue.location = location;
-                            projectIssue.assembly = a.Name.Name;
+                            projectIssue.assembly = assemblyName;
 
                             onIssueFound(projectIssue);
                         }
