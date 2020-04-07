@@ -36,6 +36,7 @@ namespace Unity.ProjectAuditor.Editor
                 name = IssueCategory.ApiCalls.ToString(),
                 groupByDescription = true,
                 showAssemblySelection = true,
+                showCritical = true,
                 showInvertedCallTree = true,
                 showFilenameColumn = true,
                 showAssemblyColumn = true
@@ -109,7 +110,7 @@ namespace Unity.ProjectAuditor.Editor
                     return false;
 
             if (m_ActiveAnalysisView.desc.showCritical &&
-                m_ProjectAuditor.config.displayOnlyCrititalIssues &&
+                m_ProjectAuditor.config.displayOnlyCriticalIssues &&
                 !issue.isPerfCriticalContext)
                 return false;
 
@@ -668,14 +669,16 @@ namespace Unity.ProjectAuditor.Editor
                 EditorGUILayout.LabelField("Show :", GUILayout.ExpandWidth(true), GUILayout.Width(80));
                 GUI.enabled = m_ActiveAnalysisView.desc.showCritical;
 
-                bool wasShowingCritical = m_ActiveAnalysisView.desc.showCritical;
-                m_ProjectAuditor.config.displayOnlyCrititalIssues = EditorGUILayout.ToggleLeft("Only Critical Issues",
-                    m_ProjectAuditor.config.displayOnlyCrititalIssues, GUILayout.Width(160));
+                bool wasShowingCritical = m_ProjectAuditor.config.displayOnlyCriticalIssues;
+                m_ProjectAuditor.config.displayOnlyCriticalIssues = EditorGUILayout.ToggleLeft("Only Critical Issues",
+                    m_ProjectAuditor.config.displayOnlyCriticalIssues, GUILayout.Width(160));
                 GUI.enabled = true;
 
-                if (wasShowingCritical != m_ActiveAnalysisView.desc.showCritical)
+                if (wasShowingCritical != m_ProjectAuditor.config.displayOnlyCriticalIssues)
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
+                    var payload = new Dictionary<string, string>();
+                    payload["selected"] = m_ActiveAnalysisView.desc.showCritical ? "true" : "false";
                     ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.OnlyCriticalIssues, analytic);
                 }
 
@@ -686,7 +689,9 @@ namespace Unity.ProjectAuditor.Editor
                 if (wasDisplayingMuted != m_ProjectAuditor.config.displayMutedIssues)
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ShowMuted, analytic);
+                    var payload = new Dictionary<string, string>();
+                    payload["selected"] = m_ProjectAuditor.config.displayMutedIssues ? "true" : "false";
+                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ShowMuted, analytic, payload);
                 }
 
                 EditorGUILayout.EndHorizontal();

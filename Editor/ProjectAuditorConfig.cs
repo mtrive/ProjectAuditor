@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Unity.ProjectAuditor.Editor
 {
     public class ProjectAuditorConfig : ScriptableObject
     {
-        public bool displayOnlyCrititalIssues;
+        public bool displayOnlyCriticalIssues;
         public bool displayMutedIssues;
         public bool enableAnalyzeOnBuild;
         public bool enableFailBuildOnIssues;
