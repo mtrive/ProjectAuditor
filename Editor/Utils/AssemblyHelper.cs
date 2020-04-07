@@ -97,6 +97,8 @@ namespace Unity.ProjectAuditor.Editor.Utils
         {
 #if UNITY_2019_3_OR_NEWER
             var module = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.Modules).FirstOrDefault(a => a.Name.Contains(assemblyName));
+            if (module == null)
+                return false;
             var info =  UnityEditor.PackageManager.PackageInfo.FindForAssembly(module.Assembly);
             if (info == null)
                 return false;
