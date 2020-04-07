@@ -52,23 +52,23 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             var localAssemblyPaths = assemblyInfos.Where(info => !info.readOnly).Select(info => info.path).ToArray();
             var readOnlyAssemblyPaths = assemblyInfos.Where(info => info.readOnly).Select(info => info.path).ToArray();
 
-            void onCallFound(CallPair pair)
+            var onCallFound = new Action<CallPair>(pair =>
             {
                 callCrawler.Add(pair);
-            }
+            });
 
-            void onCompleteInternal(IProgressBar _progressBar)
+            var onCompleteInternal = new Action<IProgressBar>(bar =>
             {
                 compilationHelper.Dispose();
-                callCrawler.BuildCallHierarchies(issues, _progressBar);
+                callCrawler.BuildCallHierarchies(issues, bar);
                 onComplete();
-            }
+            });
 
-            void onIssueFoundInternal(ProjectIssue issue)
+            var onIssueFoundInternal = new Action<ProjectIssue>(issue =>
             {
                 issues.Add(issue);
                 onIssueFound(issue);
-            }
+            });
 
             // first phase: analyze assemblies generated from editable scripts
             AnalyzeAssemblies(localAssemblyPaths, onCallFound, onIssueFoundInternal, null, progressBar);
