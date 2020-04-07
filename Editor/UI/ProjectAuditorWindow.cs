@@ -406,7 +406,7 @@ namespace Unity.ProjectAuditor.Editor
 
         private string GetSelectedAssembliesSummary()
         {
-            if (m_AssemblyNames.Length > 0)
+            if (m_AssemblyNames != null && m_AssemblyNames.Length > 0)
                 return GetSelectedSummary(m_AssemblySelection, m_AssemblyNames);
             return string.Empty;
         }
@@ -579,14 +579,13 @@ namespace Unity.ProjectAuditor.Editor
                             m_AssemblyNames);
                     }
                 }
-
-                GUI.enabled = lastEnabled;
-
-                m_AssemblySelectionSummary = GetSelectedAssembliesSummary();
-                DrawSelectedText(m_AssemblySelectionSummary);
-
-                GUILayout.FlexibleSpace();
             }
+            GUI.enabled = lastEnabled;
+
+            m_AssemblySelectionSummary = GetSelectedAssembliesSummary();
+            DrawSelectedText(m_AssemblySelectionSummary);
+
+            GUILayout.FlexibleSpace();
 
             EditorGUILayout.EndHorizontal();
         }
