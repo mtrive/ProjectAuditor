@@ -82,17 +82,6 @@ namespace Unity.ProjectAuditor.Editor.Utils
             return GetPrecompiledEngineAssemblyPaths().FirstOrDefault(a => a.Contains(assemblyName)) != null;
         }
 
-        public static bool IsPackageAssembly(string assemblyName)
-        {
-#if UNITY_2019_3_OR_NEWER
-            var module = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.Modules).FirstOrDefault(a => a.Name.Contains(assemblyName));
-            return UnityEditor.PackageManager.PackageInfo.FindForAssembly(module.Assembly) != null;
-#else
-            // assume it's not a package
-            return false;
-#endif
-        }
-
         public static bool IsAssemblyFromReadOnlyPackage(string assemblyName)
         {
 #if UNITY_2019_3_OR_NEWER
