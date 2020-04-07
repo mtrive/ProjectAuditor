@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Unity.ProjectAuditor.Editor.SettingsAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor.Macros;
 using UnityEngine;
-using Assembly = System.Reflection.Assembly;
 using Attribute = Unity.ProjectAuditor.Editor.SettingsAnalyzers.Attribute;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
@@ -125,7 +125,6 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 var paramTypes = new Type[0] {};
                 var args = new object[0] {};
                 var found = false;
-
                 // do we actually need to look in all assemblies? Maybe we can find a way to only evaluate on the right assembly
                 foreach (var assembly in m_Assemblies)
                     try

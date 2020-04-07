@@ -21,20 +21,12 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
 
         private readonly Dictionary<string, CallPair> m_CallPairs = new Dictionary<string, CallPair>();
 
-        public void Add(MethodReference caller, MethodReference callee, Location location, bool perfCriticalContext)
+        public void Add(CallPair callPair)
         {
-            var key = string.Concat(caller, "->", callee);
+            var key = string.Concat(callPair.caller, "->", callPair.callee);
             if (!m_CallPairs.ContainsKey(key))
             {
-                var calledMethodPair = new CallPair
-                {
-                    callee = callee,
-                    caller = caller,
-                    location = location,
-                    perfCriticalContext = perfCriticalContext
-                };
-
-                m_CallPairs.Add(key, calledMethodPair);
+                m_CallPairs.Add(key, callPair);
             }
         }
 
