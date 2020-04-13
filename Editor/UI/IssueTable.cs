@@ -30,7 +30,7 @@ namespace Unity.ProjectAuditor.Editor
         private readonly List<TreeViewItem> m_Rows = new List<TreeViewItem>(100);
 
         private List<IssueTableItem> m_TreeViewItemGroups;
-        private List<IssueTableItem> m_TreeViewItemIssues;
+        private IssueTableItem[] m_TreeViewItemIssues;
 
         public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader,
                           bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
@@ -61,25 +61,24 @@ namespace Unity.ProjectAuditor.Editor
                 }
             }
 
-            if (m_TreeViewItemIssues == null)
-            {
-                m_TreeViewItemIssues = new List<IssueTableItem>(issues.Length);
-            }
-
+            var itemsList = new List<IssueTableItem>(issues.Length);
+            if (m_TreeViewItemIssues != null)
+                itemsList.AddRange(m_TreeViewItemIssues);
             foreach (var issue in issues)
             {
                 var depth = m_GroupByDescription ? 1 : 0;
                 var item = new IssueTableItem(id++, depth, issue.name, issue.descriptor, issue);
-                m_TreeViewItemIssues.Add(item);
+                itemsList.Add(item);
             }
+
+            m_TreeViewItemIssues = itemsList.ToArray();
         }
 
         public void Reset()
         {
             if (m_TreeViewItemGroups != null)
                 m_TreeViewItemGroups.Clear();
-            if (m_TreeViewItemIssues != null)
-                m_TreeViewItemIssues.Clear();
+            m_TreeViewItemIssues = null;
         }
 
         protected override TreeViewItem BuildRoot()
@@ -95,7 +94,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             m_Rows.Clear();
 
-            var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.Match(item.ProjectIssue));
+            var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.Match(item.ProjectIssue)).ToArray();
             if (!filteredItems.Any())
             {
                 m_Rows.Add(new TreeViewItem(0, 0, "No issue found"));
