@@ -6,6 +6,7 @@ using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Unity.ProjectAuditor.Editor
 {
@@ -283,7 +284,9 @@ namespace Unity.ProjectAuditor.Editor
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.BeginVertical();
 
-            m_ActiveAnalysisView.OnGUI(m_ProjectReport);
+            Profiler.BeginSample("m_ActiveAnalysisView");
+            m_ActiveAnalysisView.OnGUI();
+            Profiler.EndSample();
 
             EditorGUILayout.EndVertical();
 

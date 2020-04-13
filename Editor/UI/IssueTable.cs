@@ -31,6 +31,7 @@ namespace Unity.ProjectAuditor.Editor
 
         private List<IssueTableItem> m_TreeViewItemGroups;
         private IssueTableItem[] m_TreeViewItemIssues;
+        private int m_NumMatchingIssues;
 
         public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader,
                           bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
@@ -94,8 +95,12 @@ namespace Unity.ProjectAuditor.Editor
         {
             m_Rows.Clear();
 
+            Profiler.BeginSample("IssueTable.Match");
             var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.Match(item.ProjectIssue)).ToArray();
-            if (!filteredItems.Any())
+            Profiler.EndSample();
+
+            m_NumMatchingIssues = filteredItems.Length;
+            if (m_NumMatchingIssues == 0)
             {
                 m_Rows.Add(new TreeViewItem(0, 0, "No issue found"));
                 return m_Rows;
@@ -258,6 +263,11 @@ namespace Unity.ProjectAuditor.Editor
 #endif
                 }
             }
+        }
+
+        public int GetNumMatchingIssues()
+        {
+            return m_NumMatchingIssues;
         }
 
         public IssueTableItem[] GetSelectedItems()

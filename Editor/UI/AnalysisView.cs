@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Unity.ProjectAuditor.Editor
 {
@@ -107,15 +108,17 @@ namespace Unity.ProjectAuditor.Editor
             m_Table.AddIssues(issues.Where(i => i.category == m_Desc.category).ToArray());
         }
 
-        public void OnGUI(ProjectReport projectReport)
+        public void OnGUI()
         {
             var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
-            m_Table.OnGUI(r);
 
+            Profiler.BeginSample("m_Table.OnGUI");
+            m_Table.OnGUI(r);
+            Profiler.EndSample();
             var issues = projectReport.GetIssues(m_Desc.category).Where(m_Filter.Match);
             var selectedItems = m_Table.GetSelectedItems();
             var selectedIssues = selectedItems.Select(i => i.ProjectIssue).ToArray();
-            var info = selectedIssues.Length + " / " + issues.Count() + " issues";
+            var info = selectedIssues.Length + " / " + m_Table.GetNumMatchingIssues() + " issues";
 
             EditorGUILayout.LabelField(info, GUILayout.ExpandWidth(true), GUILayout.Width(200));
         }
