@@ -115,7 +115,6 @@ namespace Unity.ProjectAuditor.Editor
             Profiler.BeginSample("m_Table.OnGUI");
             m_Table.OnGUI(r);
             Profiler.EndSample();
-            var issues = projectReport.GetIssues(m_Desc.category).Where(m_Filter.Match);
             var selectedItems = m_Table.GetSelectedItems();
             var selectedIssues = selectedItems.Select(i => i.ProjectIssue).ToArray();
             var info = selectedIssues.Length + " / " + m_Table.GetNumMatchingIssues() + " issues";
