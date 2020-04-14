@@ -284,9 +284,7 @@ namespace Unity.ProjectAuditor.Editor
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.BeginVertical();
 
-            Profiler.BeginSample("m_ActiveAnalysisView");
             m_ActiveAnalysisView.OnGUI();
-            Profiler.EndSample();
 
             EditorGUILayout.EndVertical();
 
