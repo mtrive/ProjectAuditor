@@ -95,6 +95,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             m_Rows.Clear();
 
+            // find all issues matching the filters and make an array out of them
             Profiler.BeginSample("IssueTable.Match");
             var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.Match(item.ProjectIssue)).ToArray();
             Profiler.EndSample();
