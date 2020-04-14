@@ -112,7 +112,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
 
-            Profiler.BeginSample("m_Table.OnGUI");
+            Profiler.BeginSample("IssueTable.OnGUI");
             m_Table.OnGUI(r);
             Profiler.EndSample();
             var selectedItems = m_Table.GetSelectedItems();
