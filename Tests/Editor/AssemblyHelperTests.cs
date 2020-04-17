@@ -44,6 +44,7 @@ namespace UnityEditor.ProjectAuditor.EditorTests
             Assert.NotNull(paths.FirstOrDefault(path => path.Contains("UnityEngine.CoreModule.dll")));
         }
 
+#if UNITY_2018_1_OR_NEWER
         [Test]
         public void DefaultAssemblyInfoIsCorrect()
         {
@@ -65,5 +66,6 @@ namespace UnityEditor.ProjectAuditor.EditorTests
             Assert.IsTrue(assemblyInfo.asmDefPath.Equals("Packages/com.unity.project-auditor/Editor/Unity.ProjectAuditor.Editor.asmdef"));
             Assert.IsTrue(assemblyInfo.relativePath.Equals("Packages/com.unity.project-auditor"));
         }
+#endif
     }
 }
