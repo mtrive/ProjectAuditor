@@ -64,7 +64,6 @@ namespace Unity.ProjectAuditor.Editor.Utils
             if (!m_Success)
                 throw new AssemblyCompilationException();
 
-            // return compilationResult.assemblies.Select(assembly => AssemblyHelper.GetPackageInfoFromAssemblyPath(Path.Combine(m_OutputFolder, assembly)));
             var compiledAssemblyPaths = compilationResult.assemblies.Select(assembly => Path.Combine(m_OutputFolder, assembly));
 #else
             // fallback to CompilationPipeline assemblies
