@@ -32,8 +32,6 @@ namespace Unity.ProjectAuditor.Editor.Utils
 
         public IEnumerable<AssemblyInfo> Compile(IProgressBar progressBar = null)
         {
-            //var assembly = CompilationPipeline.GetAssemblies(AssembliesType.Player).First(a => a.name.Equals(assemblyInfo.name));
-
             var assemblies = CompilationPipeline.GetAssemblies(AssembliesType.Player);
 
 #if UNITY_2018_2_OR_NEWER
@@ -66,12 +64,6 @@ namespace Unity.ProjectAuditor.Editor.Utils
             if (!m_Success)
                 throw new AssemblyCompilationException();
 
-            // TODO: check assemblies is consistent with compilationResult
-            if (assemblies.Length != compilationResult.assemblies.Count)
-            {
-                assemblies = assemblies;
-            }
-
             // return compilationResult.assemblies.Select(assembly => AssemblyHelper.GetPackageInfoFromAssemblyPath(Path.Combine(m_OutputFolder, assembly)));
             var compiledAssemblyPaths = compilationResult.assemblies.Select(assembly => Path.Combine(m_OutputFolder, assembly));
 #else
@@ -84,15 +76,9 @@ namespace Unity.ProjectAuditor.Editor.Utils
             foreach (var compiledAssemblyPath in compiledAssemblyPaths)
             {
                 var assemblyInfo = AssemblyHelper.GetAssemblyInfoFromAssemblyPath(compiledAssemblyPath);
-                var assembly = assemblies.FirstOrDefault(a => a.name.Equals(assemblyInfo.name));
-                if (assembly == null)
-                    assembly = assembly;
-                var test = assembly.sourceFiles.Where(path => !path.Contains(assemblyInfo.relativePath)).ToArray();
-                if (test.Length > 0)
-                {
-                    test = test;
-                }
+                var assembly = assemblies.First(a => a.name.Equals(assemblyInfo.name));
                 var sourcePaths = assembly.sourceFiles.Select(file => file.Remove(0, assemblyInfo.relativePath.Length + 1));
+
                 assemblyInfo.sourcePaths = sourcePaths.ToArray();
                 assemblyInfos.Add(assemblyInfo);
             }

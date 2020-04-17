@@ -4,12 +4,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
-
-//#if UNITY_2019_3_OR_NEWER
-using UnityEditor.PackageManager;
 using UnityEngine;
-
-//#endif
 
 namespace Unity.ProjectAuditor.Editor.Utils
 {
@@ -109,7 +104,7 @@ namespace Unity.ProjectAuditor.Editor.Utils
                     var info =  UnityEditor.PackageManager.PackageInfo.FindForAssetPath(asmDefPath);
                     if (info != null)
                     {
-                        assemblyInfo.readOnly = info.source != PackageSource.Embedded && info.source != PackageSource.Local;
+                        assemblyInfo.readOnly = info.source != UnityEditor.PackageManager.PackageSource.Embedded && info.source != UnityEditor.PackageManager.PackageSource.Local;
                     }
 #else
                     assemblyInfo.readOnly = true;
@@ -117,7 +112,7 @@ namespace Unity.ProjectAuditor.Editor.Utils
                 }
                 else
                 {
-                    assemblyInfo = assemblyInfo;
+                    // non-package user-defined assembly
                 }
             }
             else
