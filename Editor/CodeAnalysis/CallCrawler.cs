@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using Mono.Cecil;
+using UnityEngine.Profiling;
 using Unity.ProjectAuditor.Editor.Utils;
 
 namespace Unity.ProjectAuditor.Editor.CodeAnalysis
 {
-    internal class CallPair
+    internal class CallInfo
     {
         public MethodReference callee;
         public MethodReference caller;
@@ -16,25 +17,17 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
     {
         private const int m_MaxDepth = 10;
 
-        private readonly Dictionary<string, List<CallPair>> m_BucketedCallPairs =
-            new Dictionary<string, List<CallPair>>();
+        private readonly Dictionary<string, List<CallInfo>> m_BucketedCallPairs =
+            new Dictionary<string, List<CallInfo>>();
 
-        private readonly Dictionary<string, CallPair> m_CallPairs = new Dictionary<string, CallPair>();
+        private readonly Dictionary<string, CallInfo> m_CallPairs = new Dictionary<string, CallInfo>();
 
-        public void Add(MethodReference caller, MethodReference callee, Location location, bool perfCriticalContext)
+        public void Add(CallInfo callInfo)
         {
-            var key = string.Concat(caller, "->", callee);
+            var key = string.Concat(callInfo.caller, "->", callInfo.callee);
             if (!m_CallPairs.ContainsKey(key))
             {
-                var calledMethodPair = new CallPair
-                {
-                    callee = callee,
-                    caller = caller,
-                    location = location,
-                    perfCriticalContext = perfCriticalContext
-                };
-
-                m_CallPairs.Add(key, calledMethodPair);
+                m_CallPairs.Add(key, callInfo);
             }
         }
 
@@ -43,15 +36,16 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
             foreach (var entry in m_CallPairs)
             {
                 if (!m_BucketedCallPairs.ContainsKey(entry.Value.callee.FullName))
-                    m_BucketedCallPairs.Add(entry.Value.callee.FullName, new List<CallPair>());
+                    m_BucketedCallPairs.Add(entry.Value.callee.FullName, new List<CallInfo>());
                 m_BucketedCallPairs[entry.Value.callee.FullName].Add(entry.Value);
             }
 
-            var numIssues = issues.Count;
-            if (numIssues > 0)
+            if (issues.Count > 0)
             {
+                Profiler.BeginSample("CallCrawler.BuildCallHierarchies");
+
                 if (progressBar != null)
-                    progressBar.Initialize("Analyzing Scripts", "Analyzing call trees", numIssues);
+                    progressBar.Initialize("Analyzing Scripts", "Analyzing call trees", issues.Count);
 
                 foreach (var issue in issues)
                 {
@@ -70,6 +64,8 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
                 }
                 if (progressBar != null)
                     progressBar.ClearProgressBar();
+
+                Profiler.EndSample();
             }
         }
 

@@ -12,7 +12,7 @@ using UnityEditor.Build.Player;
 
 namespace Unity.ProjectAuditor.Editor.Utils
 {
-    public class AssemblyCompilationHelper : IDisposable
+    internal class AssemblyCompilationHelper : IDisposable
     {
         private string m_OutputFolder = String.Empty;
         private bool m_Success = true;
@@ -27,17 +27,25 @@ namespace Unity.ProjectAuditor.Editor.Utils
 
             CompilationPipeline.assemblyCompilationFinished -= OnAssemblyCompilationFinished;
 #endif
-            if (!string.IsNullOrEmpty(m_OutputFolder)) Directory.Delete(m_OutputFolder, true);
+            if (!string.IsNullOrEmpty(m_OutputFolder) && Directory.Exists(m_OutputFolder))
+            {
+                Directory.Delete(m_OutputFolder, true);
+            }
+            m_OutputFolder = string.Empty;
         }
 
-        public IEnumerable<string> Compile(IProgressBar progressBar = null)
+        public IEnumerable<AssemblyInfo> Compile(IProgressBar progressBar = null)
         {
-            if (EditorUtility.scriptCompilationFailed)
-                throw new AssemblyCompilationException();
+#if UNITY_2018_1_OR_NEWER
+            var assemblies = CompilationPipeline.GetAssemblies(AssembliesType.Player);
+#else
+            var assemblies = CompilationPipeline.GetAssemblies();
+#endif
+
 #if UNITY_2018_2_OR_NEWER
             if (progressBar != null)
             {
-                var numAssemblies = CompilationPipeline.GetAssemblies(AssembliesType.Player).Length;
+                var numAssemblies = assemblies.Length;
                 progressBar.Initialize("Assembly Compilation", "Compiling project scripts",
                     numAssemblies);
                 m_OnAssemblyCompilationStarted = (s) =>
@@ -58,15 +66,34 @@ namespace Unity.ProjectAuditor.Editor.Utils
 
             var compilationResult = PlayerBuildInterface.CompilePlayerScripts(input, m_OutputFolder);
 
-            if (!m_Success)
-                throw new AssemblyCompilationException();
+            if (progressBar != null)
+                progressBar.ClearProgressBar();
 
-            return compilationResult.assemblies.Select(assembly => Path.Combine(m_OutputFolder, assembly));
+            if (!m_Success)
+            {
+                Dispose();
+                throw new AssemblyCompilationException();
+            }
+
+            var compiledAssemblyPaths = compilationResult.assemblies.Select(assembly => Path.Combine(m_OutputFolder, assembly));
 #else
             // fallback to CompilationPipeline assemblies
-            return CompilationPipeline.GetAssemblies()
+            var compiledAssemblyPaths = CompilationPipeline.GetAssemblies()
                 .Where(a => a.flags != AssemblyFlags.EditorAssembly).Select(assembly => assembly.outputPath);
 #endif
+
+            var assemblyInfos = new List<AssemblyInfo>();
+            foreach (var compiledAssemblyPath in compiledAssemblyPaths)
+            {
+                var assemblyInfo = AssemblyHelper.GetAssemblyInfoFromAssemblyPath(compiledAssemblyPath);
+                var assembly = assemblies.First(a => a.name.Equals(assemblyInfo.name));
+                var sourcePaths = assembly.sourceFiles.Select(file => file.Remove(0, assemblyInfo.relativePath.Length + 1));
+
+                assemblyInfo.sourcePaths = sourcePaths.ToArray();
+                assemblyInfos.Add(assemblyInfo);
+            }
+
+            return assemblyInfos;
         }
 
         public IEnumerable<string> GetCompiledAssemblyDirectories()

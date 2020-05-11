@@ -63,9 +63,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             get
             {
-                if (location == null)
-                    return string.Empty;
-                return location.filename;
+                return location == null ? string.Empty : location.Filename;
             }
         }
 
@@ -73,9 +71,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             get
             {
-                if (location == null)
-                    return string.Empty;
-                return location.relativePath;
+                return location == null ? string.Empty : location.Path;
             }
         }
 
@@ -83,9 +79,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             get
             {
-                if (location == null)
-                    return 0;
-                return location.line;
+                return location == null ? 0 : location.Line;
             }
         }
 
@@ -106,10 +100,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             get
             {
-                if (callTree == null)
-                    return false;
-
-                return callTree.IsPerfCriticalContext();
+                return callTree != null && callTree.IsPerfCriticalContext();
             }
         }
 

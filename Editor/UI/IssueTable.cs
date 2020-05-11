@@ -5,8 +5,9 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.Profiling;
 
-namespace Unity.ProjectAuditor.Editor
+namespace Unity.ProjectAuditor.Editor.UI
 {
     internal class IssueTable : TreeView
     {
@@ -24,13 +25,13 @@ namespace Unity.ProjectAuditor.Editor
         private static readonly string PerfCriticalIconName = "console.warnicon";
 
         private readonly ProjectAuditorConfig m_Config;
-
         private readonly bool m_GroupByDescription;
         private readonly IIssuesFilter m_IssuesFilter;
+        private readonly List<TreeViewItem> m_Rows = new List<TreeViewItem>(100);
 
-        List<TreeViewItem> m_Rows = new List<TreeViewItem>(100);
-        List<IssueTableItem> m_TreeViewItemGroups;
-        List<IssueTableItem> m_TreeViewItemIssues;
+        private List<IssueTableItem> m_TreeViewItemGroups;
+        private IssueTableItem[] m_TreeViewItemIssues;
+        private int m_NumMatchingIssues;
 
         public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader,
                           bool groupByDescription, ProjectAuditorConfig config, IIssuesFilter issuesFilter) : base(state,
@@ -61,17 +62,24 @@ namespace Unity.ProjectAuditor.Editor
                 }
             }
 
-            if (m_TreeViewItemIssues == null)
-            {
-                m_TreeViewItemIssues = new List<IssueTableItem>(issues.Length);
-            }
-
+            var itemsList = new List<IssueTableItem>(issues.Length);
+            if (m_TreeViewItemIssues != null)
+                itemsList.AddRange(m_TreeViewItemIssues);
             foreach (var issue in issues)
             {
                 var depth = m_GroupByDescription ? 1 : 0;
                 var item = new IssueTableItem(id++, depth, issue.name, issue.descriptor, issue);
-                m_TreeViewItemIssues.Add(item);
+                itemsList.Add(item);
             }
+
+            m_TreeViewItemIssues = itemsList.ToArray();
+        }
+
+        public void Reset()
+        {
+            if (m_TreeViewItemGroups != null)
+                m_TreeViewItemGroups.Clear();
+            m_TreeViewItemIssues = null;
         }
 
         protected override TreeViewItem BuildRoot()
@@ -87,13 +95,19 @@ namespace Unity.ProjectAuditor.Editor
         {
             m_Rows.Clear();
 
-            var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.ShouldDisplay(item.ProjectIssue));
-            if (!filteredItems.Any())
+            // find all issues matching the filters and make an array out of them
+            Profiler.BeginSample("IssueTable.Match");
+            var filteredItems = m_TreeViewItemIssues.Where(item => m_IssuesFilter.Match(item.ProjectIssue)).ToArray();
+            Profiler.EndSample();
+
+            m_NumMatchingIssues = filteredItems.Length;
+            if (m_NumMatchingIssues == 0)
             {
                 m_Rows.Add(new TreeViewItem(0, 0, "No issue found"));
                 return m_Rows;
             }
 
+            Profiler.BeginSample("IssueTable.BuildRows");
             if (m_GroupByDescription)
             {
                 var descriptors = filteredItems.Select(i => i.ProblemDescriptor).Distinct();
@@ -125,6 +139,8 @@ namespace Unity.ProjectAuditor.Editor
                 }
             }
             SortIfNeeded(m_Rows);
+
+            Profiler.EndSample();
 
             return m_Rows;
         }
@@ -236,18 +252,13 @@ namespace Unity.ProjectAuditor.Editor
             var issue = issueTableItem.ProjectIssue;
             if (issue.location != null && issue.location.IsValid())
             {
-                if (File.Exists(issue.location.path))
-                {
-                    issue.location.Open();
-                }
-                else
-                {
-#if UNITY_2018_3_OR_NEWER
-                    var window = SettingsService.OpenProjectSettings(issue.location.path);
-                    window.Repaint();
-#endif
-                }
+                issue.location.Open();
             }
+        }
+
+        public int GetNumMatchingIssues()
+        {
+            return m_NumMatchingIssues;
         }
 
         public IssueTableItem[] GetSelectedItems()

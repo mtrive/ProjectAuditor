@@ -20,7 +20,6 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         private readonly Dictionary<int, ISettingsAnalyzer> m_SettingsAnalyzers =
             new Dictionary<int, ISettingsAnalyzer>();
-
         private List<ProblemDescriptor> m_ProblemDescriptors;
 
         internal SettingsAuditor(ProjectAuditorConfig config)
@@ -114,7 +113,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     descriptor,
                     description,
                     IssueCategory.ProjectSettings,
-                    new Location {path = projectWindowPath}
+                    new Location(projectWindowPath)
                 )
             );
         }
@@ -123,8 +122,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         {
             if (string.IsNullOrEmpty(descriptor.customevaluator))
             {
-                var paramTypes = new Type[0] {};
-                var args = new object[0] {};
+                var paramTypes = new Type[] {};
+                var args = new object[] {};
                 var found = false;
                 // do we actually need to look in all assemblies? Maybe we can find a way to only evaluate on the right assembly
                 foreach (var assembly in m_Assemblies)
@@ -135,8 +134,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
                         if (value.ToString() == descriptor.value)
                         {
-                            AddIssue(descriptor, string.Format("{0}: {1}", descriptor.description, value),
-                                onIssueFound);
+                            AddIssue(descriptor, string.Format("{0}: {1}", descriptor.description, value), onIssueFound);
                         }
 
                         // Eval did not throw exception so we can stop iterating assemblies
@@ -156,7 +154,6 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 var helperType = m_Helpers.GetType();
                 var theMethod = helperType.GetMethod(descriptor.customevaluator);
                 var isIssue = (bool)theMethod.Invoke(m_Helpers, null);
-
                 if (isIssue) AddIssue(descriptor, descriptor.description, onIssueFound);
             }
         }

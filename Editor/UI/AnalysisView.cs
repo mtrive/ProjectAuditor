@@ -3,8 +3,9 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEngine.Profiling;
 
-namespace Unity.ProjectAuditor.Editor
+namespace Unity.ProjectAuditor.Editor.UI
 {
     internal struct AnalysisViewDescriptor
     {
@@ -39,7 +40,7 @@ namespace Unity.ProjectAuditor.Editor
             get { return m_Desc; }
         }
 
-        public void CreateTable(ProjectReport projectReport)
+        public void CreateTable()
         {
             if (m_Table != null)
                 return;
@@ -95,25 +96,28 @@ namespace Unity.ProjectAuditor.Editor
                 });
             }
 
-            var issues = projectReport.GetIssues(m_Desc.category);
-
             m_Table = new IssueTable(state,
                 new MultiColumnHeader(new MultiColumnHeaderState(columnsList.ToArray())),
                 m_Desc.groupByDescription,
                 m_Config,
                 m_Filter);
-            m_Table.AddIssues(issues.ToArray());
         }
 
-        public void OnGUI(ProjectReport projectReport)
+        public void AddIssues(IEnumerable<ProjectIssue> issues)
+        {
+            m_Table.AddIssues(issues.Where(i => i.category == m_Desc.category).ToArray());
+        }
+
+        public void OnGUI()
         {
             var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
-            m_Table.OnGUI(r);
 
-            var issues = projectReport.GetIssues(m_Desc.category).Where(m_Filter.ShouldDisplay);
+            Profiler.BeginSample("IssueTable.OnGUI");
+            m_Table.OnGUI(r);
+            Profiler.EndSample();
             var selectedItems = m_Table.GetSelectedItems();
             var selectedIssues = selectedItems.Select(i => i.ProjectIssue).ToArray();
-            var info = selectedIssues.Length + " / " + issues.Count() + " issues";
+            var info = selectedIssues.Length + " / " + m_Table.GetNumMatchingIssues() + " issues";
 
             EditorGUILayout.LabelField(info, GUILayout.ExpandWidth(true), GUILayout.Width(200));
         }

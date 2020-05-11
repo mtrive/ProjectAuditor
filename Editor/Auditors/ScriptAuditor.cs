@@ -3,25 +3,31 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Unity.ProjectAuditor.Editor.CodeAnalysis;
 using Unity.ProjectAuditor.Editor.InstructionAnalyzers;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEngine;
+using UnityEngine.Profiling;
 using Attribute = Unity.ProjectAuditor.Editor.InstructionAnalyzers.Attribute;
+using ThreadPriority = System.Threading.ThreadPriority;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
 {
     public class ScriptAuditor : IAuditor
     {
+        private readonly ProjectAuditorConfig m_Config;
         private readonly List<IInstructionAnalyzer> m_InstructionAnalyzers = new List<IInstructionAnalyzer>();
         private readonly List<OpCode> m_OpCodes = new List<OpCode>();
-        private string[] m_AssemblyNames;
         private List<ProblemDescriptor> m_ProblemDescriptors;
+
+        private Thread m_AssemblyAnalysisThread;
 
         internal ScriptAuditor(ProjectAuditorConfig config)
         {
+            m_Config = config;
         }
 
         public IEnumerable<ProblemDescriptor> GetDescriptors()
@@ -31,54 +37,107 @@ namespace Unity.ProjectAuditor.Editor.Auditors
 
         public void Audit(Action<ProjectIssue> onIssueFound, Action onComplete, IProgressBar progressBar = null)
         {
-            var callCrawler = new CallCrawler();
-            var issues = new List<ProjectIssue>();
+            if (m_Config.enableBackgroundAnalysis && m_AssemblyAnalysisThread != null)
+                m_AssemblyAnalysisThread.Join();
 
-            using (var compilationHelper = new AssemblyCompilationHelper())
+            var compilationHelper = new AssemblyCompilationHelper();
+            var callCrawler = new CallCrawler();
+
+            Profiler.BeginSample("ScriptAuditor.Audit.Compilation");
+            var assemblyInfos = compilationHelper.Compile(progressBar);
+            Profiler.EndSample();
+
+            var issues = new List<ProjectIssue>();
+            var localAssemblyInfos = assemblyInfos.Where(info => !info.readOnly).ToArray();
+            var readOnlyAssemblyInfos = assemblyInfos.Where(info => info.readOnly).ToArray();
+
+            var onCallFound = new Action<CallInfo>(pair =>
+            {
+                callCrawler.Add(pair);
+            });
+
+            var onCompleteInternal = new Action<IProgressBar>(bar =>
+            {
+                compilationHelper.Dispose();
+                callCrawler.BuildCallHierarchies(issues, bar);
+                onComplete();
+            });
+
+            var onIssueFoundInternal = new Action<ProjectIssue>(issue =>
+            {
+                issues.Add(issue);
+                onIssueFound(issue);
+            });
+
+            Profiler.BeginSample("ScriptAuditor.Audit.Analysis");
+
+            // first phase: analyze assemblies generated from editable scripts
+            AnalyzeAssemblies(localAssemblyInfos, onCallFound, onIssueFoundInternal, null, progressBar);
+
+            var enableBackgroundAnalysis = m_Config.enableBackgroundAnalysis;
+#if !UNITY_2019_3_OR_NEWER
+            enableBackgroundAnalysis = false;
+#endif
+            // second phase: analyze all remaining assemblies, in a separate thread if enableBackgroundAnalysis is enabled
+            if (enableBackgroundAnalysis)
+            {
+                m_AssemblyAnalysisThread = new Thread(() =>
+                    AnalyzeAssemblies(readOnlyAssemblyInfos, onCallFound, onIssueFound, onCompleteInternal));
+                m_AssemblyAnalysisThread.Name = "Assembly Analysis";
+                m_AssemblyAnalysisThread.Priority = ThreadPriority.BelowNormal;
+                m_AssemblyAnalysisThread.Start();
+            }
+            else
+            {
+                Profiler.BeginSample("ScriptAuditor.Audit.AnalysisReadOnly");
+                AnalyzeAssemblies(readOnlyAssemblyInfos, onCallFound, onIssueFoundInternal, onCompleteInternal, progressBar);
+                Profiler.EndSample();
+            }
+            Profiler.EndSample();
+        }
+
+        private void AnalyzeAssemblies(IEnumerable<AssemblyInfo> assemblyInfos, Action<CallInfo> onCallFound, Action<ProjectIssue> onIssueFound, Action<IProgressBar> onComplete, IProgressBar progressBar = null)
+        {
+            var compiledAssemblyDirectories = assemblyInfos.Select(info => Path.GetDirectoryName(info.path)).Distinct();
+
             using (var assemblyResolver = new DefaultAssemblyResolver())
             {
-                var compiledAssemblyPaths = compilationHelper.Compile(progressBar);
-
                 foreach (var dir in AssemblyHelper.GetPrecompiledAssemblyDirectories())
                     assemblyResolver.AddSearchDirectory(dir);
 
                 foreach (var dir in AssemblyHelper.GetPrecompiledEngineAssemblyDirectories())
                     assemblyResolver.AddSearchDirectory(dir);
 
-                foreach (var dir in compilationHelper.GetCompiledAssemblyDirectories())
+                foreach (var dir in compiledAssemblyDirectories)
                     assemblyResolver.AddSearchDirectory(dir);
 
                 if (progressBar != null)
                     progressBar.Initialize("Analyzing Scripts", "Analyzing project scripts",
-                        compiledAssemblyPaths.Count());
+                        assemblyInfos.Count());
 
                 // Analyse all Player assemblies
-                foreach (var assemblyPath in compiledAssemblyPaths)
+                foreach (var assemblyInfo in assemblyInfos)
                 {
                     if (progressBar != null)
-                        progressBar.AdvanceProgressBar(string.Format("Analyzing {0} scripts",
-                            Path.GetFileName(assemblyPath)));
+                        progressBar.AdvanceProgressBar(string.Format("Analyzing {0}", assemblyInfo.name));
 
-                    if (!File.Exists(assemblyPath))
+                    if (!File.Exists(assemblyInfo.path))
                     {
-                        Debug.LogError(assemblyPath + " not found.");
+                        Debug.LogError(assemblyInfo.path + " not found.");
                         continue;
                     }
 
-                    AnalyzeAssembly(assemblyPath, assemblyResolver, callCrawler, (issue) =>
-                    {
-                        issues.Add(issue);
-                        onIssueFound(issue);
-                    });
+                    AnalyzeAssembly(assemblyInfo, assemblyResolver, onCallFound, onIssueFound);
                 }
             }
 
             if (progressBar != null)
                 progressBar.ClearProgressBar();
 
-            callCrawler.BuildCallHierarchies(issues, progressBar);
-
-            onComplete();
+            if (onComplete != null)
+            {
+                onComplete(progressBar);
+            }
         }
 
         public void LoadDatabase(string path)
@@ -103,29 +162,32 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             m_ProblemDescriptors.Add(descriptor);
         }
 
-        private void AnalyzeAssembly(string assemblyPath, IAssemblyResolver assemblyResolver,
-            CallCrawler callCrawler, Action<ProjectIssue> onIssueFound)
+        private void AnalyzeAssembly(AssemblyInfo assemblyInfo, IAssemblyResolver assemblyResolver, Action<CallInfo> onCallFound, Action<ProjectIssue> onIssueFound)
         {
-            using (var assembly = AssemblyDefinition.ReadAssembly(assemblyPath,
+            Profiler.BeginSample("ScriptAuditor.AnalyzeAssembly " + assemblyInfo.name);
+
+            using (var assembly = AssemblyDefinition.ReadAssembly(assemblyInfo.path,
                 new ReaderParameters {ReadSymbols = true, AssemblyResolver = assemblyResolver}))
             {
-                var assemblyName = assembly.Name.Name;
                 foreach (var methodDefinition in MonoCecilHelper.AggregateAllTypeDefinitions(assembly.MainModule.Types)
                          .SelectMany(t => t.Methods))
                 {
                     if (!methodDefinition.HasBody)
                         continue;
 
-                    AnalyzeMethodBody(assemblyName, methodDefinition, callCrawler, onIssueFound);
+                    AnalyzeMethodBody(assemblyInfo, methodDefinition, onCallFound, onIssueFound);
                 }
             }
+
+            Profiler.EndSample();
         }
 
-        private void AnalyzeMethodBody(string assemblyName, MethodDefinition caller,
-            CallCrawler callCrawler, Action<ProjectIssue> onIssueFound)
+        private void AnalyzeMethodBody(AssemblyInfo assemblyInfo, MethodDefinition caller, Action<CallInfo> onCallFound, Action<ProjectIssue> onIssueFound)
         {
             if (!caller.DebugInformation.HasSequencePoints)
                 return;
+
+            Profiler.BeginSample("ScriptAuditor.AnalyzeMethodBody");
 
             var callerNode = new CallTreeNode(caller);
             var perfCriticalContext = IsPerformanceCriticalContext(caller);
@@ -143,8 +205,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 Location location = null;
                 if (s != null)
                 {
-                    location = new Location
-                    {path = s.Document.Url.Replace("\\", "/"), line = s.StartLine};
+                    location = new Location(AssemblyHelper.ResolveAssetPath(assemblyInfo, s.Document.Url), s.StartLine);
                     callerNode.location = location;
                 }
                 else
@@ -153,7 +214,15 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                 }
 
                 if (inst.OpCode == OpCodes.Call || inst.OpCode == OpCodes.Callvirt)
-                    callCrawler.Add(caller, (MethodReference)inst.Operand, location, perfCriticalContext);
+                {
+                    onCallFound(new CallInfo
+                    {
+                        callee = (MethodReference)inst.Operand,
+                        caller = caller,
+                        location = location,
+                        perfCriticalContext = perfCriticalContext
+                    });
+                }
 
                 foreach (var analyzer in m_InstructionAnalyzers)
                     if (analyzer.GetOpCodes().Contains(inst.OpCode))
@@ -164,12 +233,13 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                             projectIssue.callTree.perfCriticalContext = perfCriticalContext;
                             projectIssue.callTree.AddChild(callerNode);
                             projectIssue.location = location;
-                            projectIssue.assembly = assemblyName;
+                            projectIssue.assembly = assemblyInfo.name;
 
                             onIssueFound(projectIssue);
                         }
                     }
             }
+            Profiler.EndSample();
         }
 
         private void AddAnalyzer(IInstructionAnalyzer analyzer)
@@ -178,7 +248,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             m_OpCodes.AddRange(analyzer.GetOpCodes());
         }
 
-        public static IEnumerable<ProjectIssue> FindScriptIssues(ProjectReport projectReport, string relativePath)
+        internal static IEnumerable<ProjectIssue> FindScriptIssues(ProjectReport projectReport, string relativePath)
         {
             return projectReport.GetIssues(IssueCategory.ApiCalls).Where(i => i.relativePath.Equals(relativePath));
         }

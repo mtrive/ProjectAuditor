@@ -7,15 +7,22 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
-namespace Unity.ProjectAuditor.Editor
+namespace Unity.ProjectAuditor.Editor.UI
 {
     internal interface IIssuesFilter
     {
-        bool ShouldDisplay(ProjectIssue issue);
+        bool Match(ProjectIssue issue);
     }
 
     internal class ProjectAuditorWindow : EditorWindow, IHasCustomMenu, IIssuesFilter
     {
+        enum AnalysisState
+        {
+            NotStarted,
+            InProgress,
+            Completed,
+            Valid
+        }
         // strings
         private static readonly string[] m_AreaNames =
         {
@@ -56,6 +63,7 @@ namespace Unity.ProjectAuditor.Editor
 
         private string[] m_ModeNames;
         private ProjectAuditor m_ProjectAuditor;
+        private bool m_ShouldRefresh = false;
 
         // UI
         private readonly List<AnalysisView> m_AnalysisViews = new List<AnalysisView>();
@@ -76,7 +84,7 @@ namespace Unity.ProjectAuditor.Editor
         [SerializeField] private bool m_ShowCallTree;
         [SerializeField] private bool m_ShowDetails = true;
         [SerializeField] private bool m_ShowRecommendation = true;
-        [SerializeField] private bool m_ValidReport;
+        [SerializeField] AnalysisState m_AnalysisState = AnalysisState.NotStarted;
 
         private AnalysisView m_ActiveAnalysisView
         {
@@ -94,20 +102,32 @@ namespace Unity.ProjectAuditor.Editor
             menu.AddItem(Styles.UserMode, !m_DeveloperMode, OnToggleDeveloperMode);
         }
 
-        public bool ShouldDisplay(ProjectIssue issue)
+        public bool Match(ProjectIssue issue)
         {
-            if (m_ActiveAnalysisView.desc.showAssemblySelection &&
-                !m_AssemblySelection.Contains(issue.assembly) &&
-                !m_AssemblySelection.ContainsGroup("All"))
+            UnityEngine.Profiling.Profiler.BeginSample("MatchAssembly");
+            var matchAssembly = !m_ActiveAnalysisView.desc.showAssemblySelection ||
+                m_AssemblySelection != null &&
+                (m_AssemblySelection.Contains(issue.assembly) ||
+                    m_AssemblySelection.ContainsGroup("All"));
+            UnityEngine.Profiling.Profiler.EndSample();
+            if (!matchAssembly)
                 return false;
 
-            if (!m_AreaSelection.Contains(issue.descriptor.area) &&
-                !m_AreaSelection.ContainsGroup("All"))
+            UnityEngine.Profiling.Profiler.BeginSample("MatchArea");
+            var matchArea = m_AreaSelection.Contains(issue.descriptor.area) ||
+                m_AreaSelection.ContainsGroup("All");
+            UnityEngine.Profiling.Profiler.EndSample();
+            if (!matchArea)
                 return false;
 
             if (!m_ProjectAuditor.config.displayMutedIssues)
-                if (m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) == Rule.Action.None)
+            {
+                UnityEngine.Profiling.Profiler.BeginSample("IsMuted");
+                var muted = m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) == Rule.Action.None;
+                UnityEngine.Profiling.Profiler.EndSample();
+                if (muted)
                     return false;
+            }
 
             if (m_ActiveAnalysisView.desc.showCritical &&
                 m_ProjectAuditor.config.displayOnlyCriticalIssues &&
@@ -155,7 +175,15 @@ namespace Unity.ProjectAuditor.Editor
 
             m_AnalysisViews.Clear();
             foreach (var desc in m_AnalysisViewDescriptors)
-                m_AnalysisViews.Add(new AnalysisView(desc, m_ProjectAuditor.config, this));
+            {
+                var view = new AnalysisView(desc, m_ProjectAuditor.config, this);
+                view.CreateTable();
+
+                if (m_AnalysisState == AnalysisState.Valid)
+                    view.AddIssues(m_ProjectReport.GetIssues(view.desc.category));
+
+                m_AnalysisViews.Add(view);
+            }
 
             m_CallHierarchyView = new CallHierarchyView(new TreeViewState());
 
@@ -178,7 +206,7 @@ namespace Unity.ProjectAuditor.Editor
 
         private bool IsAnalysisValid()
         {
-            return m_ValidReport;
+            return m_AnalysisState != AnalysisState.NotStarted;
         }
 
         private bool MatchesSearch(string field)
@@ -189,24 +217,43 @@ namespace Unity.ProjectAuditor.Editor
 
         private void Analyze()
         {
+            m_ShouldRefresh = true;
+            m_AnalysisState = AnalysisState.InProgress;
+            m_ProjectReport = new ProjectReport();
+            foreach (var view in m_AnalysisViews)
+            {
+                view.m_Table.Reset();
+            }
+
+            var newIssues = new List<ProjectIssue>();
+
             try
             {
-                m_ProjectReport = m_ProjectAuditor.Audit(new ProgressBarDisplay());
+                m_ProjectAuditor.Audit((projectIssue) =>
+                {
+                    newIssues.Add(projectIssue);
+                    m_ProjectReport.AddIssue(projectIssue);
+                },
+                    (bool completed) =>
+                    {
+                        // add batch of issues
+                        foreach (var view in m_AnalysisViews)
+                        {
+                            view.AddIssues(newIssues);
+                        }
+                        newIssues.Clear();
 
-                // update list of assembly names
-                var scriptIssues = m_ProjectReport.GetIssues(IssueCategory.ApiCalls);
-                m_AssemblyNames = scriptIssues.Select(i => i.assembly).Distinct().OrderBy(str => str).ToArray();
-                UpdateAssemblySelection();
-
-                m_ValidReport = true;
+                        if (completed)
+                            m_AnalysisState = AnalysisState.Completed;
+                        m_ShouldRefresh = true;
+                    },
+                    new ProgressBarDisplay());
             }
             catch (AssemblyCompilationException e)
             {
+                m_AnalysisState = AnalysisState.NotStarted;
                 Debug.LogError(e);
-                m_ValidReport = false;
             }
-
-            RefreshDisplay();
         }
 
         private void RefreshDisplay()
@@ -214,8 +261,15 @@ namespace Unity.ProjectAuditor.Editor
             if (!IsAnalysisValid())
                 return;
 
-            foreach (var view in m_AnalysisViews)
-                view.CreateTable(m_ProjectReport);
+            if (m_AnalysisState == AnalysisState.Completed)
+            {
+                // update list of assembly names
+                var scriptIssues = m_ProjectReport.GetIssues(IssueCategory.ApiCalls);
+                m_AssemblyNames = scriptIssues.Select(i => i.assembly).Distinct().OrderBy(str => str).ToArray();
+                UpdateAssemblySelection();
+
+                m_AnalysisState = AnalysisState.Valid;
+            }
 
             m_ActiveIssueTable.Reload();
         }
@@ -223,7 +277,6 @@ namespace Unity.ProjectAuditor.Editor
         private void Reload()
         {
             m_ProjectAuditor.LoadDatabase();
-            // m_IssueTables.Clear();
         }
 
         private void Export()
@@ -244,7 +297,7 @@ namespace Unity.ProjectAuditor.Editor
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.BeginVertical();
 
-            m_ActiveAnalysisView.OnGUI(m_ProjectReport);
+            m_ActiveAnalysisView.OnGUI();
 
             EditorGUILayout.EndVertical();
 
@@ -367,7 +420,7 @@ namespace Unity.ProjectAuditor.Editor
 
         private string GetSelectedAssembliesSummary()
         {
-            if (m_AssemblyNames.Length > 0)
+            if (m_AssemblyNames != null && m_AssemblyNames.Length > 0)
                 return GetSelectedSummary(m_AssemblySelection, m_AssemblyNames);
             return string.Empty;
         }
@@ -516,15 +569,13 @@ namespace Unity.ProjectAuditor.Editor
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(Styles.AssemblyFilter, GUILayout.Width(LayoutSize.FilterOptionsLeftLabelWidth));
 
-            if (m_AssemblyNames.Length > 0)
+            var lastEnabled = GUI.enabled;
+
+            GUI.enabled = m_AnalysisState == AnalysisState.Valid && !AssemblySelectionWindow.IsOpen() && m_ActiveAnalysisView.desc.showAssemblySelection;
+            if (GUILayout.Button(Styles.AssemblyFilterSelect, EditorStyles.miniButton,
+                GUILayout.Width(LayoutSize.FilterOptionsEnumWidth)))
             {
-                var lastEnabled = GUI.enabled;
-                // SteveM TODO - We don't currently have any sense of when the Auditor is busy and should disallow user input
-                var enabled = /*!IsAnalysisRunning() &&*/
-                    !AssemblySelectionWindow.IsOpen() && m_ActiveAnalysisView.desc.showAssemblySelection;
-                GUI.enabled = enabled;
-                if (GUILayout.Button(Styles.AssemblyFilterSelect, EditorStyles.miniButton,
-                    GUILayout.Width(LayoutSize.FilterOptionsEnumWidth)))
+                if (m_AssemblyNames != null && m_AssemblyNames.Length > 0)
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
 
@@ -546,14 +597,13 @@ namespace Unity.ProjectAuditor.Editor
 
                     ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.AssemblySelect, analytic);
                 }
-
-                GUI.enabled = lastEnabled;
-
-                m_AssemblySelectionSummary = GetSelectedAssembliesSummary();
-                DrawSelectedText(m_AssemblySelectionSummary);
-
-                GUILayout.FlexibleSpace();
             }
+            GUI.enabled = lastEnabled;
+
+            m_AssemblySelectionSummary = GetSelectedAssembliesSummary();
+            DrawSelectedText(m_AssemblySelectionSummary);
+
+            GUILayout.FlexibleSpace();
 
             EditorGUILayout.EndHorizontal();
         }
@@ -720,9 +770,10 @@ namespace Unity.ProjectAuditor.Editor
                     }
 
                 }
-                else if (shouldRefresh)
+                else if (shouldRefresh || m_ShouldRefresh || m_AnalysisState == AnalysisState.Completed)
                 {
                     RefreshDisplay();
+                    m_ShouldRefresh = false;
                 }
             }
             EditorGUILayout.EndVertical();
@@ -761,14 +812,14 @@ namespace Unity.ProjectAuditor.Editor
             if (!m_AssemblySelection.selection.Any())
             {
                 // initial selection setup:
-                // - non-package assembly, or
+                // - assemblies from user scripts or editable packages, or
                 // - default assembly, or,
                 // - all generated assemblies
 
                 var compiledAssemblies = m_AssemblyNames.Where(a => !AssemblyHelper.IsModuleAssembly(a));
                 if (AssemblyHelper.IsPackageInfoAvailable())
                     compiledAssemblies = compiledAssemblies.Where(a =>
-                        !AssemblyHelper.IsPackageAssembly(a));
+                        !AssemblyHelper.GetAssemblyInfoFromAssemblyPath(a).readOnly);
                 m_AssemblySelection.selection.AddRange(compiledAssemblies);
 
                 if (!m_AssemblySelection.selection.Any())
@@ -827,6 +878,8 @@ namespace Unity.ProjectAuditor.Editor
         {
             EditorGUILayout.BeginHorizontal(GUI.skin.box);
             {
+                GUI.enabled = (m_AnalysisState == AnalysisState.Valid || m_AnalysisState == AnalysisState.NotStarted);
+
                 if (GUILayout.Button(Styles.AnalyzeButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
@@ -835,7 +888,8 @@ namespace Unity.ProjectAuditor.Editor
                     ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.Analyze, analytic);
                 }
 
-                GUI.enabled = IsAnalysisValid();
+                GUI.enabled = m_AnalysisState == AnalysisState.Valid;
+
                 if (GUILayout.Button(Styles.ExportButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
@@ -846,10 +900,17 @@ namespace Unity.ProjectAuditor.Editor
                 GUI.enabled = true;
 
                 if (m_DeveloperMode)
+                {
                     if (GUILayout.Button(Styles.ReloadButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
                     {
                         Reload();
                     }
+                }
+                
+                if (m_AnalysisState == AnalysisState.InProgress)
+                {
+                    GUILayout.Label(Styles.AnalysisInProgressLabel, GUILayout.ExpandWidth(true));
+                }
             }
             EditorGUILayout.EndHorizontal();
         }
@@ -916,6 +977,10 @@ namespace Unity.ProjectAuditor.Editor
 
             public static readonly GUIContent AnalyzeButton =
                 new GUIContent("Analyze", "Analyze Project and list all issues found.");
+
+            public static readonly GUIContent AnalysisInProgressLabel =
+                new GUIContent("Analysis in progress...", "Analysis in progress...please wait.");
+
 
             public static readonly GUIContent ReloadButton =
                 new GUIContent("Reload DB", "Reload Issue Definition files.");
