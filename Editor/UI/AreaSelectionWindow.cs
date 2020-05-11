@@ -90,7 +90,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 var payload = new Dictionary<string, string>();
                 payload["areas"] = m_ProjectAuditorWindow.GetSelectedAreasSummary();
-                ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.AreaSelectApply, analytic, payload);
+                ProjectAuditorAnalytics.SendUIButtonEventWithKeyValues(ProjectAuditorAnalytics.UIButton.AreaSelectApply, analytic, payload);
             }
 
             EditorGUILayout.EndHorizontal();

@@ -7,6 +7,8 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
+using SelectionSummary = Unity.ProjectAuditor.Editor.ProjectAuditorAnalytics.SelectionSummary;
+
 namespace Unity.ProjectAuditor.Editor.UI
 {
     internal interface IIssuesFilter
@@ -699,18 +701,29 @@ namespace Unity.ProjectAuditor.Editor.UI
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                     var selectedItems = m_ActiveIssueTable.GetSelectedItems();
-                    foreach (var item in selectedItems) SetRuleForItem(item, Rule.Action.None);
+                    foreach (var item in selectedItems)
+                    {
+                        SetRuleForItem(item, Rule.Action.None);
+                    }
 
-                    if (!m_ProjectAuditor.config.displayMutedIssues) m_ActiveIssueTable.SetSelection(new List<int>());
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.Mute, analytic);
+                    if (!m_ProjectAuditor.config.displayMutedIssues)
+                    {
+                        m_ActiveIssueTable.SetSelection(new List<int>());
+                    }
+                    var payload = CollectSelectionStats();
+                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Mute, analytic, payload);
                 }
 
                 if (GUILayout.Button(Styles.UnmuteButton, GUILayout.ExpandWidth(true), GUILayout.Width(100)))
                 {
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                     var selectedItems = m_ActiveIssueTable.GetSelectedItems();
-                    foreach (var item in selectedItems) ClearRulesForItem(item);
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.Unmute, analytic);
+                    foreach (var item in selectedItems)
+                    {
+                        ClearRulesForItem(item);
+                    }
+                    var payload = CollectSelectionStats();
+                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Unmute, analytic, payload);
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -741,7 +754,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                     var payload = new Dictionary<string, string>();
                     payload["selected"] = m_ProjectAuditor.config.displayMutedIssues ? "true" : "false";
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ShowMuted, analytic, payload);
+                    ProjectAuditorAnalytics.SendUIButtonEventWithKeyValues(ProjectAuditorAnalytics.UIButton.ShowMuted, analytic, payload);
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -777,6 +790,67 @@ namespace Unity.ProjectAuditor.Editor.UI
                 }
             }
             EditorGUILayout.EndVertical();
+        }
+
+        SelectionSummary[] CollectSelectionStats()
+        {
+            Dictionary<int, SelectionSummary> selectionsDict = new Dictionary<int, SelectionSummary>();
+
+            var selectedItems = m_ActiveIssueTable.GetSelectedItems();
+
+            var selectedRoots = selectedItems.Where(item => item.hasChildren);
+            var selectedChildren = selectedItems.Where(item => item.parent != null);
+
+            foreach (var rootItem in selectedRoots)
+            {
+                int id = rootItem.ProblemDescriptor.id;
+                SelectionSummary summary;
+                if (!selectionsDict.TryGetValue(id, out summary))
+                {
+                    summary = new SelectionSummary {id = id, selectedCount = rootItem.children.Count};
+                    selectionsDict[id] = summary;
+                }
+
+                foreach (var child in rootItem.children)
+                {
+                    if (((IssueTableItem)child).ProjectIssue.isPerfCriticalContext)
+                    {
+                        ++summary.selectedCriticalCount;
+                    }
+                }
+
+                selectionsDict[id] = summary;
+            }
+
+            foreach (var childItem in selectedChildren)
+            {
+                int id = childItem.ProblemDescriptor.id;
+                SelectionSummary summary;
+                if (!selectionsDict.TryGetValue(id, out summary))
+                {
+                    summary = new SelectionSummary {id = id};
+                    selectionsDict[id] = summary;
+                }
+
+                // Ensure that if an issue is selected AND its root/parent issue has been selected
+                // that we don't count the child one. Otherwise we over-report.
+                if (!selectedRoots.Any(item => item.ProblemDescriptor.id == id))
+                {
+                    ++summary.selectedCount;
+
+                    if (childItem.ProjectIssue.isPerfCriticalContext)
+                    {
+                        ++summary.selectedCriticalCount;
+                    }
+                }
+
+                selectionsDict[id] = summary;
+            }
+
+            var selectionsArray =
+                selectionsDict.Values.OrderByDescending(x => x.selectedCount).Take(5).ToArray();
+
+            return selectionsArray;
         }
 
         public void SetAssemblySelection(TreeViewSelection selection)
@@ -906,7 +980,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                         Reload();
                     }
                 }
-                
+
                 if (m_AnalysisState == AnalysisState.InProgress)
                 {
                     GUILayout.Label(Styles.AnalysisInProgressLabel, GUILayout.ExpandWidth(true));

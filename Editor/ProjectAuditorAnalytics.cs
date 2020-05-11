@@ -43,9 +43,27 @@ namespace Unity.ProjectAuditor.Editor
 
         // -------------------------------------------------------------------------------------------------------------
 
-        // camelCase since these events get serialized to Json and naming convention in analytics is camelCase
         [Serializable]
         struct ProjectAuditorUIButtonEvent
+        {
+            // camelCase since these events get serialized to Json and naming convention in analytics is camelCase
+            public string action;    // Name of the buttom
+            public Int64 t_since_start; // Time since app start (in microseconds)
+            public Int64 duration; // Duration of event in ticks - 100-nanosecond intervals.
+            public Int64 ts; //Timestamp (milliseconds epoch) when action started.
+
+            public ProjectAuditorUIButtonEvent(string name, Analytic analytic)
+            {
+                action = name;
+                t_since_start = SecondsToMicroseconds(analytic.GetStartTime());
+                duration = SecondsToTicks(analytic.GetDurationInSeconds());
+                ts = analytic.GetTimestamp();
+            }
+        }
+
+
+        [Serializable]
+        struct ProjectAuditorUIButtonEventWithKeyValues
         {
             [Serializable]
             public struct EventKeyValue
@@ -54,20 +72,18 @@ namespace Unity.ProjectAuditor.Editor
                 public string value;
             }
 
-            public string action;    // Name of the buttom
-            public bool blocking;    // Was this action blocking? (True for all events in Project Auditor, at least until background analysis is implemented)
-
-            //public Dictionary<string, string> action_params; // Custom data for specific event payloads
+            public string action;
+            public Int64 t_since_start;
+            public Int64 duration;
+            public Int64 ts;
             public EventKeyValue[] action_params;
 
-            public Int64 t_since_start; // Time since app start (in microseconds)
-            public Int64 duration; // Duration of event in ticks - 100-nanosecond intervals.
-            public Int64 ts; //Timestamp (milliseconds epoch) when action started.
-
-            public ProjectAuditorUIButtonEvent(string name, Analytic analytic, Dictionary<string, string> payload)
+            public ProjectAuditorUIButtonEventWithKeyValues(string name, Analytic analytic, Dictionary<string, string> payload)
             {
                 action = name;
-                blocking = analytic.GetBlocking();
+                t_since_start = SecondsToMicroseconds(analytic.GetStartTime());
+                duration = SecondsToTicks(analytic.GetDurationInSeconds());
+                ts = analytic.GetTimestamp();
 
                 // Convert dictionary to a serializable array of key/value pairs
                 if (payload != null && payload.Count > 0)
@@ -85,94 +101,138 @@ namespace Unity.ProjectAuditor.Editor
                 {
                     action_params = null;
                 }
+            }
+        }
 
+        [Serializable]
+        public struct SelectionSummary
+        {
+            public int id;
+            // stephenm TODO : populate this. But is this currently-visible issues? All of them? Only the un-muted ones?
+            //public int totalIssueCount;
+            public int selectedCount;
+            public int selectedCriticalCount;
+        }
+
+        [Serializable]
+        struct ProjectAuditorUIButtonEventWithSelectionSummary
+        {
+            public string action;
+            public Int64 t_since_start;
+            public Int64 duration;
+            public Int64 ts;
+            public SelectionSummary[] action_params;
+
+            public ProjectAuditorUIButtonEventWithSelectionSummary(string name, Analytic analytic, SelectionSummary[] payload)
+            {
+                action = name;
                 t_since_start = SecondsToMicroseconds(analytic.GetStartTime());
                 duration = SecondsToTicks(analytic.GetDurationInSeconds());
                 ts = analytic.GetTimestamp();
-            }
-
-            static Int64 SecondsToMilliseconds(float seconds)
-            {
-                return (Int64)(seconds * 1000);
-            }
-
-            static Int64 SecondsToTicks(float durationInSeconds)
-            {
-                return (Int64)(durationInSeconds * 10000);
-            }
-
-            static Int64 SecondsToMicroseconds(double seconds)
-            {
-                return (Int64)(seconds * 1000000);
+                action_params = payload;
             }
         }
 
         // -------------------------------------------------------------------------------------------------------------
 
-        static public bool SendUIButtonEvent(UIButton uiButton, Analytic analytic, Dictionary<string, string> payload = null)
+        static string GetButtonName(UIButton uiButton)
         {
-            analytic.End();
-
-            if (!s_EnableAnalytics)
-                return false;
-
-#if UNITY_2018_1_OR_NEWER
-            // Duration is in "ticks" 100 nanosecond intervals. I.e. 0.1 microseconds
-            //float durationInTicks = SecondsToTicks(durationInSeconds);
-            string buttonName = "";
             switch (uiButton)
             {
                 case UIButton.Analyze:
-                    buttonName = "analyze_button_click";
-                    break;
+                    return"analyze_button_click";
                 case UIButton.Export:
-                    buttonName = "export_button_click";
-                    break;
+                    return"export_button_click";
                 case UIButton.ApiCalls:
-                    buttonName = "api_tab";
-                    break;
+                    return"api_tab";
                 case UIButton.ProjectSettings:
-                    buttonName = "settings_tab";
-                    break;
+                    return"settings_tab";
                 case UIButton.AssemblySelect:
-                    buttonName = "assembly_button_click";
-                    break;
+                    return"assembly_button_click";
                 case UIButton.AssemblySelectApply:
-                    buttonName = "assembly_apply";
-                    break;
+                    return"assembly_apply";
                 case UIButton.AreaSelect:
-                    buttonName = "area_button_click";
-                    break;
+                    return"area_button_click";
                 case UIButton.AreaSelectApply:
-                    buttonName = "area_apply";
-                    break;
+                    return"area_apply";
                 case UIButton.Mute:
-                    buttonName = "mute_button_click";
-                    break;
+                    return"mute_button_click";
                 case UIButton.Unmute:
-                    buttonName = "unmute_button_click";
-                    break;
+                    return"unmute_button_click";
                 case UIButton.ShowMuted:
-                    buttonName = "show_muted_checkbox";
-                    break;
+                    return"show_muted_checkbox";
                 case UIButton.OnlyCriticalIssues:
-                    buttonName = "only_hotpath_checkbox";
-                    break;
+                    return"only_hotpath_checkbox";
                 default:
                     Debug.LogFormat("SendUIButtonEvent: Unsupported button type : {0}", uiButton);
-                    return false;
+                    return "";
             }
+        }
 
-            ProjectAuditorUIButtonEvent uiButtonEvent = new ProjectAuditorUIButtonEvent(buttonName, analytic, payload);
+        static Int64 SecondsToMilliseconds(float seconds)
+        {
+            return (Int64)(seconds * 1000);
+        }
 
-            AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
-            if (result != AnalyticsResult.Ok)
-                return false;
+        static Int64 SecondsToTicks(float durationInSeconds)
+        {
+            return (Int64)(durationInSeconds * 10000);
+        }
 
-            return true;
-#else
-            return false;
+        static Int64 SecondsToMicroseconds(double seconds)
+        {
+            return (Int64)(seconds * 1000000);
+        }
+
+        static public bool SendUIButtonEvent(UIButton uiButton, Analytic analytic)
+        {
+            analytic.End();
+
+            if (s_EnableAnalytics)
+            {
+#if UNITY_2018_1_OR_NEWER
+                ProjectAuditorUIButtonEvent uiButtonEvent =
+                    new ProjectAuditorUIButtonEvent(GetButtonName(uiButton), analytic);
+
+                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                return (result == AnalyticsResult.Ok);
 #endif
+            }
+            return false;
+        }
+
+        static public bool SendUIButtonEventWithKeyValues(UIButton uiButton, Analytic analytic, Dictionary<string, string> payload)
+        {
+            analytic.End();
+
+            if (s_EnableAnalytics)
+            {
+#if UNITY_2018_1_OR_NEWER
+                ProjectAuditorUIButtonEventWithKeyValues uiButtonEvent =
+                    new ProjectAuditorUIButtonEventWithKeyValues(GetButtonName(uiButton), analytic, payload);
+
+                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                return (result == AnalyticsResult.Ok);
+#endif
+            }
+            return false;
+        }
+
+        static public bool SendUIButtonEventWithSelectionSummary(UIButton uiButton, Analytic analytic, SelectionSummary[] payload)
+        {
+            analytic.End();
+
+            if (s_EnableAnalytics)
+            {
+#if UNITY_2018_1_OR_NEWER
+                ProjectAuditorUIButtonEventWithSelectionSummary uiButtonEvent =
+                    new ProjectAuditorUIButtonEventWithSelectionSummary(GetButtonName(uiButton), analytic, payload);
+
+                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                return (result == AnalyticsResult.Ok);
+#endif
+            }
+            return false;
         }
 
         // -------------------------------------------------------------------------------------------------------------
