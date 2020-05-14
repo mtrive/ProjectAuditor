@@ -432,114 +432,18 @@ namespace Unity.ProjectAuditor.Editor.UI
             return GetSelectedSummary(m_AreaSelection, m_AreaNames);
         }
 
-        // SteveM TODO - This seems wildly more complex than it needs to be... UNLESS assemblies can have sub-assemblies?
-        // If that's the case, we need to test for that. Otherwise we need to strip a bunch of this complexity out.
         private string GetSelectedSummary(TreeViewSelection selection, string[] names)
         {
-            if (selection.selection == null || selection.selection.Count == 0)
+            string[] selectedStrings = selection.GetSelectedStrings(names, true);
+            int numStrings = selectedStrings.Length;
+
+            if (numStrings == 0)
                 return "None";
 
-            // Count all items in a group
-            var dict = new Dictionary<string, int>();
-            var selectionDict = new Dictionary<string, int>();
-            foreach (var nameWithIndex in names)
-            {
-                var identifier = new TreeItemIdentifier(nameWithIndex);
-                if (identifier.index == TreeItemIdentifier.kAll)
-                    continue;
+            if (numStrings == 1)
+                return selectedStrings[0];
 
-                int count;
-                if (dict.TryGetValue(identifier.name, out count))
-                    dict[identifier.name] = count + 1;
-                else
-                    dict[identifier.name] = 1;
-
-                selectionDict[identifier.name] = 0;
-            }
-
-            // Count all the items we have 'selected' in a group
-            foreach (var nameWithIndex in selection.selection)
-            {
-                var identifier = new TreeItemIdentifier(nameWithIndex);
-
-                if (dict.ContainsKey(identifier.name) &&
-                    selectionDict.ContainsKey(identifier.name) &&
-                    identifier.index <= dict[identifier.name])
-                    // Selected assembly valid and in the assembly list
-                    // and also within the range of valid assemblies for this data set
-                    selectionDict[identifier.name]++;
-            }
-
-            // Count all groups where we have 'selected all the items'
-            var selectedCount = 0;
-            foreach (var name in dict.Keys)
-            {
-                if (selectionDict[name] != dict[name])
-                    continue;
-
-                selectedCount++;
-            }
-
-            // If we've just added all the item names we have everything selected
-            // Note we don't compare against the names array directly as this contains the 'all' versions
-            if (selectedCount == dict.Keys.Count)
-                return "All";
-
-            // Add all the individual items were we haven't already added the group
-            var individualItems = new List<string>();
-            foreach (var name in selectionDict.Keys)
-            {
-                var selectionCount = selectionDict[name];
-                if (selectionCount <= 0)
-                    continue;
-                var itemCount = dict[name];
-                if (itemCount == 1)
-                    individualItems.Add(name);
-                else if (selectionCount != itemCount)
-                    individualItems.Add(string.Format("{0} ({1} of {2})", name, selectionCount, itemCount));
-                else
-                    individualItems.Add(string.Format("{0} (All)", name));
-            }
-
-            // Maintain alphabetical order
-            individualItems.Sort(CompareUINames);
-
-            if (individualItems.Count == 0)
-                return "None";
-
-            return string.Join(", ", individualItems.ToArray());
-        }
-
-        private int CompareUINames(string a, string b)
-        {
-            var aTokens = a.Split(':');
-            var bTokens = b.Split(':');
-
-            if (aTokens.Length > 1 && bTokens.Length > 1)
-            {
-                var firstName = aTokens[0].Trim();
-                var secondName = bTokens[0].Trim();
-
-                if (firstName == secondName)
-                {
-                    var firstNameIndex = aTokens[1].Trim();
-                    var secondNameIndex = bTokens[1].Trim();
-
-                    if (firstNameIndex == "All" && secondNameIndex != "All")
-                        return -1;
-                    if (firstNameIndex != "All" && secondNameIndex == "All")
-                        return 1;
-
-                    int aGroupIndex;
-                    if (int.TryParse(firstNameIndex, out aGroupIndex))
-                    {
-                        int bGroupIndex;
-                        if (int.TryParse(secondNameIndex, out bGroupIndex)) return aGroupIndex.CompareTo(bGroupIndex);
-                    }
-                }
-            }
-
-            return a.CompareTo(b);
+            return string.Join(", ", selectedStrings);
         }
 
         private void DrawSelectedText(string text)
@@ -610,7 +514,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             EditorGUILayout.EndHorizontal();
         }
 
-        // SteveM TODO - if AssemblySelectionWindow and AreaSelectionWindow end up sharing a common base class then
+        // stephenm TODO - if AssemblySelectionWindow and AreaSelectionWindow end up sharing a common base class then
         // DrawAssemblyFilter() and DrawAreaFilter() can be made to call a common method and just pass the selection, names
         // and the type of window we want.
         private void DrawAreaFilter()
@@ -621,7 +525,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (m_AreaNames.Length > 0)
             {
                 var lastEnabled = GUI.enabled;
-                // SteveM TODO - We don't currently have any sense of when the Auditor is busy and should disallow user input
+                // stephenm TODO - We don't currently have any sense of when the Auditor is busy and should disallow user input
                 var enabled = /*!IsAnalysisRunning() &&*/ !AreaSelectionWindow.IsOpen();
                 GUI.enabled = enabled;
                 if (GUILayout.Button(Styles.AreaFilterSelect, EditorStyles.miniButton,
