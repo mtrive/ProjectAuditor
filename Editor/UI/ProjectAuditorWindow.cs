@@ -66,6 +66,7 @@ namespace Unity.ProjectAuditor.Editor.UI
         private string[] m_ModeNames;
         private ProjectAuditor m_ProjectAuditor;
         private bool m_ShouldRefresh = false;
+        private ProjectAuditorAnalytics.Analytic m_analyzeButtonAnalytic;
 
         // UI
         private readonly List<AnalysisView> m_AnalysisViews = new List<AnalysisView>();
@@ -219,6 +220,8 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         private void Analyze()
         {
+            m_analyzeButtonAnalytic = ProjectAuditorAnalytics.BeginAnalytic();
+
             m_ShouldRefresh = true;
             m_AnalysisState = AnalysisState.InProgress;
             m_ProjectReport = new ProjectReport();
@@ -246,7 +249,10 @@ namespace Unity.ProjectAuditor.Editor.UI
                         newIssues.Clear();
 
                         if (completed)
+                        {
                             m_AnalysisState = AnalysisState.Completed;
+                        }
+
                         m_ShouldRefresh = true;
                     },
                     new ProgressBarDisplay());
@@ -271,6 +277,8 @@ namespace Unity.ProjectAuditor.Editor.UI
                 UpdateAssemblySelection();
 
                 m_AnalysisState = AnalysisState.Valid;
+
+                ProjectAuditorAnalytics.SendUIButtonEventWithAnalyzeSummary(ProjectAuditorAnalytics.UIButton.Analyze, m_analyzeButtonAnalytic, m_ProjectReport);
             }
 
             m_ActiveIssueTable.Reload();
@@ -696,6 +704,9 @@ namespace Unity.ProjectAuditor.Editor.UI
             EditorGUILayout.EndVertical();
         }
 
+        // stephenm TODO - I really want to move this into ProjectAuditorAnalytics.cs and just pass m_ActiveIssueTable.GetSelectedItems()
+        // to SendUIButtonEventWithSelectionSummary() to keep the analytics number crunching in that file, bu when I tried I get a CS0234
+        // because of IssueTableItem being in Unity.ProjectAuditor.Editor.UI which apparently can't be seen from outside that namespace.
         SelectionSummary[] CollectSelectionStats()
         {
             Dictionary<int, SelectionSummary> selectionsDict = new Dictionary<int, SelectionSummary>();
@@ -860,10 +871,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 if (GUILayout.Button(Styles.AnalyzeButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
                 {
-                    var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                     Analyze();
-                    // stephenm TODO - we need much more data in the payload here!
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.Analyze, analytic);
                 }
 
                 GUI.enabled = m_AnalysisState == AnalysisState.Valid;

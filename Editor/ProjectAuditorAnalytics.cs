@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
-using UnityEditor.Analytics;
 using UnityEngine;
 using UnityEngine.Analytics;
 
@@ -11,6 +11,8 @@ namespace Unity.ProjectAuditor.Editor
     {
         const int k_MaxEventsPerHour = 100;
         const int k_MaxEventItems = 1000;
+        const int k_MaxIssuesInAnalyzeSummary = 10;
+
         const string k_VendorKey = "unity.projectauditor";
         const string k_EventTopicName = "projectAuditorUsage";
 
@@ -133,6 +135,34 @@ namespace Unity.ProjectAuditor.Editor
             }
         }
 
+        [Serializable]
+        public struct IssueStats
+        {
+            public int id;
+            public int numOccurrences;
+            public int numHotPathOccurrences;
+        }
+
+        [Serializable]
+        class ProjectAuditorUIButtonEventWithAnalyzeSummary
+        {
+            public string action;
+            public Int64 t_since_start;
+            public Int64 duration;
+            public Int64 ts;
+
+            public IssueStats[] action_params;
+
+            public ProjectAuditorUIButtonEventWithAnalyzeSummary(string name, Analytic analytic, IssueStats[] payload)
+            {
+                action = name;
+                t_since_start = SecondsToMicroseconds(analytic.GetStartTime());
+                duration = SecondsToTicks(analytic.GetDurationInSeconds());
+                ts = analytic.GetTimestamp();
+                action_params = payload;
+            }
+        }
+
         // -------------------------------------------------------------------------------------------------------------
 
         static string GetButtonName(UIButton uiButton)
@@ -227,6 +257,51 @@ namespace Unity.ProjectAuditor.Editor
 #if UNITY_2018_1_OR_NEWER
                 ProjectAuditorUIButtonEventWithSelectionSummary uiButtonEvent =
                     new ProjectAuditorUIButtonEventWithSelectionSummary(GetButtonName(uiButton), analytic, payload);
+
+                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                return (result == AnalyticsResult.Ok);
+#endif
+            }
+            return false;
+        }
+
+        static public bool SendUIButtonEventWithAnalyzeSummary(UIButton uiButton, Analytic analytic, ProjectReport projectReport)
+        {
+            analytic.End();
+
+            if (s_EnableAnalytics)
+            {
+#if UNITY_2018_1_OR_NEWER
+
+                var statsDict = new Dictionary<int, IssueStats>();
+
+                var scriptIssues = projectReport.GetIssues(IssueCategory.ApiCalls);
+                int numScriptIssues = scriptIssues.Length;
+                for(int i = 0; i < numScriptIssues; ++i)
+                {
+                    ProblemDescriptor descriptor = scriptIssues[i].descriptor;
+
+                    int id = descriptor.id;
+                    IssueStats stats;
+                    if (!statsDict.TryGetValue(id, out stats))
+                    {
+                        stats = new IssueStats { id = id };
+                    }
+
+                    ++stats.numOccurrences;
+
+                    if (scriptIssues[i].isPerfCriticalContext)
+                    {
+                        ++stats.numHotPathOccurrences;
+                    }
+
+                    statsDict[id] = stats;
+                }
+
+                var payload = statsDict.Values.OrderByDescending(x => x.numOccurrences).Take(k_MaxIssuesInAnalyzeSummary).ToArray();
+
+                ProjectAuditorUIButtonEventWithAnalyzeSummary uiButtonEvent =
+                    new ProjectAuditorUIButtonEventWithAnalyzeSummary(GetButtonName(uiButton), analytic, payload);
 
                 AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
