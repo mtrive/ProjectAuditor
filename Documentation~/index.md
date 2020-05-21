@@ -47,13 +47,13 @@ The issues are categorized based on whether they are found in code or project se
 The filters allow the user to search through the list of potential issues by string, Assembly and other criterias.
 ![](images/filters.png)
 
-The issues are displayed in table containinig some details regarding impacted area, filename, etc.
+The issues are displayed in a table containinig some details regarding impacted area, filename, etc.
 ![](images/issues.png)
 
-The right end panels provide additional details with regards to the reported problem and the recommendation
+The right end panels provide additional information regarding the selected issue, in particular, an extended description of the problem and a recommendation on how to solve it.
 ![](images/panels.png)
 
-The mute/unmute buttons can be used to silence specific issues or groups of issues that are currently selected.
+The mute/unmute buttons can be used to silence specific issues, or groups of issues, that are currently selected.
 ![](images/mute.png)
 
 # Technical details
