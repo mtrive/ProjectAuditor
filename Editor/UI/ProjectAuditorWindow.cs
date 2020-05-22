@@ -7,8 +7,6 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
-using SelectionSummary = Unity.ProjectAuditor.Editor.ProjectAuditorAnalytics.SelectionSummary;
-
 namespace Unity.ProjectAuditor.Editor.UI
 {
     internal interface IIssuesFilter
@@ -622,8 +620,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     {
                         m_ActiveIssueTable.SetSelection(new List<int>());
                     }
-                    var payload = CollectSelectionStats();
-                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Mute, analytic, payload);
+                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Mute, analytic, m_ActiveIssueTable.GetSelectedItems());
                 }
 
                 if (GUILayout.Button(Styles.UnmuteButton, GUILayout.ExpandWidth(true), GUILayout.Width(100)))
@@ -634,8 +631,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     {
                         ClearRulesForItem(item);
                     }
-                    var payload = CollectSelectionStats();
-                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Unmute, analytic, payload);
+                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Unmute, analytic, m_ActiveIssueTable.GetSelectedItems());
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -702,70 +698,6 @@ namespace Unity.ProjectAuditor.Editor.UI
                 }
             }
             EditorGUILayout.EndVertical();
-        }
-
-        // stephenm TODO - I really want to move this into ProjectAuditorAnalytics.cs and just pass m_ActiveIssueTable.GetSelectedItems()
-        // to SendUIButtonEventWithSelectionSummary() to keep the analytics number crunching in that file, bu when I tried I get a CS0234
-        // because of IssueTableItem being in Unity.ProjectAuditor.Editor.UI which apparently can't be seen from outside that namespace.
-        SelectionSummary[] CollectSelectionStats()
-        {
-            Dictionary<int, SelectionSummary> selectionsDict = new Dictionary<int, SelectionSummary>();
-
-            var selectedItems = m_ActiveIssueTable.GetSelectedItems();
-
-            var selectedRoots = selectedItems.Where(item => item.hasChildren);
-            var selectedChildren = selectedItems.Where(item => item.parent != null);
-
-            foreach (var rootItem in selectedRoots)
-            {
-                int id = rootItem.ProblemDescriptor.id;
-                SelectionSummary summary;
-                if (!selectionsDict.TryGetValue(id, out summary))
-                {
-                    summary = new SelectionSummary {id = id, selectedCount = rootItem.children.Count};
-                    selectionsDict[id] = summary;
-                }
-
-                foreach (var child in rootItem.children)
-                {
-                    if (((IssueTableItem)child).ProjectIssue.isPerfCriticalContext)
-                    {
-                        ++summary.selectedCriticalCount;
-                    }
-                }
-
-                selectionsDict[id] = summary;
-            }
-
-            foreach (var childItem in selectedChildren)
-            {
-                int id = childItem.ProblemDescriptor.id;
-                SelectionSummary summary;
-                if (!selectionsDict.TryGetValue(id, out summary))
-                {
-                    summary = new SelectionSummary {id = id};
-                    selectionsDict[id] = summary;
-                }
-
-                // Ensure that if an issue is selected AND its root/parent issue has been selected
-                // that we don't count the child one. Otherwise we over-report.
-                if (!selectedRoots.Any(item => item.ProblemDescriptor.id == id))
-                {
-                    ++summary.selectedCount;
-
-                    if (childItem.ProjectIssue.isPerfCriticalContext)
-                    {
-                        ++summary.selectedCriticalCount;
-                    }
-                }
-
-                selectionsDict[id] = summary;
-            }
-
-            var selectionsArray =
-                selectionsDict.Values.OrderByDescending(x => x.selectedCount).Take(5).ToArray();
-
-            return selectionsArray;
         }
 
         public void SetAssemblySelection(TreeViewSelection selection)

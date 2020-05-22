@@ -5,9 +5,9 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Analytics;
 
-namespace Unity.ProjectAuditor.Editor
+namespace Unity.ProjectAuditor.Editor.UI
 {
-    public class ProjectAuditorAnalytics
+    internal class ProjectAuditorAnalytics
     {
         const int k_MaxEventsPerHour = 100;
         const int k_MaxEventItems = 1000;
@@ -107,35 +107,6 @@ namespace Unity.ProjectAuditor.Editor
         }
 
         [Serializable]
-        public struct SelectionSummary
-        {
-            public int id;
-            // stephenm TODO : populate this. But is this currently-visible issues? All of them? Only the un-muted ones?
-            //public int totalIssueCount;
-            public int selectedCount;
-            public int selectedCriticalCount;
-        }
-
-        [Serializable]
-        struct ProjectAuditorUIButtonEventWithSelectionSummary
-        {
-            public string action;
-            public Int64 t_since_start;
-            public Int64 duration;
-            public Int64 ts;
-            public SelectionSummary[] action_params;
-
-            public ProjectAuditorUIButtonEventWithSelectionSummary(string name, Analytic analytic, SelectionSummary[] payload)
-            {
-                action = name;
-                t_since_start = SecondsToMicroseconds(analytic.GetStartTime());
-                duration = SecondsToTicks(analytic.GetDurationInSeconds());
-                ts = analytic.GetTimestamp();
-                action_params = payload;
-            }
-        }
-
-        [Serializable]
         public struct IssueStats
         {
             public int id;
@@ -144,22 +115,24 @@ namespace Unity.ProjectAuditor.Editor
         }
 
         [Serializable]
-        class ProjectAuditorUIButtonEventWithAnalyzeSummary
+        class ProjectAuditorUIButtonEventWithIssueStats
         {
             public string action;
             public Int64 t_since_start;
             public Int64 duration;
             public Int64 ts;
 
-            public IssueStats[] action_params;
+            public IssueStats[] issue_stats;
 
-            public ProjectAuditorUIButtonEventWithAnalyzeSummary(string name, Analytic analytic, IssueStats[] payload)
+            public ProjectAuditorUIButtonEventWithIssueStats(string name, Analytic analytic, IssueStats[] payload)
             {
                 action = name;
                 t_since_start = SecondsToMicroseconds(analytic.GetStartTime());
                 duration = SecondsToTicks(analytic.GetDurationInSeconds());
                 ts = analytic.GetTimestamp();
-                action_params = payload;
+                issue_stats = payload;
+
+                Debug.Log(string.Format("TS {0}", ts));
             }
         }
 
@@ -214,6 +187,104 @@ namespace Unity.ProjectAuditor.Editor
             return (Int64)(seconds * 1000000);
         }
 
+        // -------------------------------------------------------------------------------------------------------------
+
+        static IssueStats[] CollectSelectionStats(IssueTableItem[] selectedItems)
+        {
+
+            var selectionsDict = new Dictionary<int, IssueStats>();
+
+            var selectedRoots = selectedItems.Where(item => item.hasChildren);
+
+            var selectedChildren = selectedItems.Where(item => item.parent != null);
+
+            foreach (var rootItem in selectedRoots)
+            {
+                int id = rootItem.ProblemDescriptor.id;
+                IssueStats issueStats;
+                if (!selectionsDict.TryGetValue(id, out issueStats))
+                {
+                    issueStats = new IssueStats { id = id, numOccurrences = rootItem.children.Count };
+                    selectionsDict[id] = issueStats;
+                }
+
+                foreach (var child in rootItem.children)
+                {
+                    if (((IssueTableItem)child).ProjectIssue.isPerfCriticalContext)
+                    {
+                        ++issueStats.numHotPathOccurrences;
+                    }
+                }
+
+                selectionsDict[id] = issueStats;
+            }
+
+            foreach (var childItem in selectedChildren)
+            {
+                int id = childItem.ProblemDescriptor.id;
+                IssueStats summary;
+                if (!selectionsDict.TryGetValue(id, out summary))
+                {
+                    summary = new IssueStats
+                    {
+                        id = id
+                    };
+                    selectionsDict[id] = summary;
+                }
+
+                // Ensure that if an issue is selected AND its root/parent issue has been selected
+                // that we don't count the child one. Otherwise we over-report.
+                if (!selectedRoots.Any(item => item.ProblemDescriptor.id == id))
+                {
+                    ++summary.numOccurrences;
+
+                    if (childItem.ProjectIssue.isPerfCriticalContext)
+                    {
+                        ++summary.numHotPathOccurrences;
+                    }
+                }
+
+                selectionsDict[id] = summary;
+            }
+
+            var selectionsArray =
+                selectionsDict.Values.OrderByDescending(x => x.numOccurrences).Take(5).ToArray();
+
+            return selectionsArray;
+        }
+
+        static IssueStats[] GetScriptIssuesSummary(ProjectReport projectReport)
+        {
+            var statsDict = new Dictionary<int, IssueStats>();
+
+            var scriptIssues = projectReport.GetIssues(IssueCategory.ApiCalls);
+            int numScriptIssues = scriptIssues.Length;
+            for (int i = 0; i < numScriptIssues; ++i)
+            {
+                ProblemDescriptor descriptor = scriptIssues[i].descriptor;
+
+                int id = descriptor.id;
+                IssueStats stats;
+                if (!statsDict.TryGetValue(id, out stats))
+                {
+                    stats = new IssueStats { id = id };
+                }
+
+                ++stats.numOccurrences;
+
+                if (scriptIssues[i].isPerfCriticalContext)
+                {
+                    ++stats.numHotPathOccurrences;
+                }
+
+                statsDict[id] = stats;
+            }
+
+            return statsDict.Values.OrderByDescending(x => x.numOccurrences).Take(k_MaxIssuesInAnalyzeSummary).ToArray();
+        }
+
+        // -------------------------------------------------------------------------------------------------------------
+
         static public bool SendUIButtonEvent(UIButton uiButton, Analytic analytic)
         {
             analytic.End();
@@ -248,15 +319,17 @@ namespace Unity.ProjectAuditor.Editor
             return false;
         }
 
-        static public bool SendUIButtonEventWithSelectionSummary(UIButton uiButton, Analytic analytic, SelectionSummary[] payload)
+        static public bool SendUIButtonEventWithSelectionSummary(UIButton uiButton, Analytic analytic, IssueTableItem[] selectedItems)
         {
             analytic.End();
 
             if (s_EnableAnalytics)
             {
 #if UNITY_2018_1_OR_NEWER
-                ProjectAuditorUIButtonEventWithSelectionSummary uiButtonEvent =
-                    new ProjectAuditorUIButtonEventWithSelectionSummary(GetButtonName(uiButton), analytic, payload);
+                var payload = CollectSelectionStats(selectedItems);
+
+                ProjectAuditorUIButtonEventWithIssueStats uiButtonEvent =
+                    new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
 
                 AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
@@ -272,36 +345,10 @@ namespace Unity.ProjectAuditor.Editor
             if (s_EnableAnalytics)
             {
 #if UNITY_2018_1_OR_NEWER
+                var payload = GetScriptIssuesSummary(projectReport);
 
-                var statsDict = new Dictionary<int, IssueStats>();
-
-                var scriptIssues = projectReport.GetIssues(IssueCategory.ApiCalls);
-                int numScriptIssues = scriptIssues.Length;
-                for(int i = 0; i < numScriptIssues; ++i)
-                {
-                    ProblemDescriptor descriptor = scriptIssues[i].descriptor;
-
-                    int id = descriptor.id;
-                    IssueStats stats;
-                    if (!statsDict.TryGetValue(id, out stats))
-                    {
-                        stats = new IssueStats { id = id };
-                    }
-
-                    ++stats.numOccurrences;
-
-                    if (scriptIssues[i].isPerfCriticalContext)
-                    {
-                        ++stats.numHotPathOccurrences;
-                    }
-
-                    statsDict[id] = stats;
-                }
-
-                var payload = statsDict.Values.OrderByDescending(x => x.numOccurrences).Take(k_MaxIssuesInAnalyzeSummary).ToArray();
-
-                ProjectAuditorUIButtonEventWithAnalyzeSummary uiButtonEvent =
-                    new ProjectAuditorUIButtonEventWithAnalyzeSummary(GetButtonName(uiButton), analytic, payload);
+                ProjectAuditorUIButtonEventWithIssueStats uiButtonEvent =
+                    new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
 
                 AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
