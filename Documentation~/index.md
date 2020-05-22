@@ -52,11 +52,11 @@ The filters allow the user to search through the list of potential issues by str
 
 <img src="images/filters.png" width="50%" height=50%>
 
-The issues are displayed in a table containinig some details regarding impacted area, filename, etc.
+The issues are displayed in a table containing some details regarding impacted area, filename, etc.
 
 <img src="images/issues.png">
 
-The right end panels provide additional information regarding the selected issue, in particular, an extended description of the problem and a recommendation on how to solve it.
+The panels on the right hand side of the window provide additional information regarding the selected issue. The top panel shows an extended description of the problem, the next panel down contains a recommendation on how to solve the problem, and (when viewing script issues) the bottom panel shows an inverted call tree which allows you to see all of the code paths which lead to the currently-selected line of code.
 
 <img src="images/panels.png">
 
