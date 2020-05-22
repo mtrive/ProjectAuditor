@@ -83,7 +83,8 @@ The following table indicates the package directory structure:
 |---|---|
 |`Data`|Contains the issue definition database.|
 |`Documentation~`|Contains documentation files.|
-|`Editor`|Contains all editor scripts: Project Auditor, Editor window and external DLLs.|
+|`Editor`|Contains all editor scripts: Project Auditor and external DLLs.|
+|`Editor/UI`|Project Auditor Editor window.|
 |`Tests`|Contains all scripts required to test the package.|
 
 ## Document revision history 
