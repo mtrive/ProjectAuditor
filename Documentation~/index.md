@@ -42,11 +42,11 @@ Once the Project Auditor window is opened. Press *Analyze* to analyse the projec
 
 The analysis might take several seconds, depending on how large the project is. Once the analysis completes, Project Auditor will show the report of potential issues, filters and additional information.
 
-<img src="images/settings-issues.png">
+<img src="images/overview.png">
 
 The issues are categorized based on whether they are found in code or project settings. The active category can also be changed.
 
-<img src="images/category.png">
+<img src="images/category.png" width="50%" height=50%>
 
 The filters allow the user to search through the list of potential issues by string, Assembly and other criterias.
 
