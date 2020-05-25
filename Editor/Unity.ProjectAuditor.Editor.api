@@ -143,27 +143,6 @@ namespace Unity.ProjectAuditor.Editor
     }
 }
 
-namespace Unity.ProjectAuditor.Editor.Auditors
-{
-    public class ScriptAuditor : Unity.ProjectAuditor.Editor.IAuditor
-    {
-        public virtual void Audit(System.Action<Unity.ProjectAuditor.Editor.ProjectIssue> onIssueFound, System.Action onComplete, Unity.ProjectAuditor.Editor.IProgressBar progressBar = default(Unity.ProjectAuditor.Editor.IProgressBar));
-        [System.Runtime.CompilerServices.IteratorStateMachine(typeof(Unity.ProjectAuditor.Editor.Auditors.ScriptAuditor.<GetAnalyzerTypes>d__10))] public virtual System.Collections.Generic.IEnumerable<System.Type> GetAnalyzerTypes(System.Reflection.Assembly assembly);
-        public virtual System.Collections.Generic.IEnumerable<Unity.ProjectAuditor.Editor.ProblemDescriptor> GetDescriptors();
-        public virtual void LoadDatabase(string path);
-        public virtual void RegisterDescriptor(Unity.ProjectAuditor.Editor.ProblemDescriptor descriptor);
-    }
-
-    public class SettingsAuditor : Unity.ProjectAuditor.Editor.IAuditor
-    {
-        public virtual void Audit(System.Action<Unity.ProjectAuditor.Editor.ProjectIssue> onIssueFound, System.Action onComplete, Unity.ProjectAuditor.Editor.IProgressBar progressBar = default(Unity.ProjectAuditor.Editor.IProgressBar));
-        [System.Runtime.CompilerServices.IteratorStateMachine(typeof(Unity.ProjectAuditor.Editor.Auditors.SettingsAuditor.<GetAnalyzerTypes>d__8))] public virtual System.Collections.Generic.IEnumerable<System.Type> GetAnalyzerTypes(System.Reflection.Assembly assembly);
-        public virtual System.Collections.Generic.IEnumerable<Unity.ProjectAuditor.Editor.ProblemDescriptor> GetDescriptors();
-        public virtual void LoadDatabase(string path);
-        public virtual void RegisterDescriptor(Unity.ProjectAuditor.Editor.ProblemDescriptor descriptor);
-    }
-}
-
 namespace Unity.ProjectAuditor.Editor.CodeAnalysis
 {
     public class CallTreeNode
