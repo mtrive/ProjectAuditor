@@ -14,9 +14,9 @@ namespace Unity.ProjectAuditor.Editor.Utils
     [Serializable]
     public class Location
     {
-        private int m_Line;
-        private string m_Path; // path relative to the project folder
-        private LocationType m_Type;
+        [SerializeField] private int m_Line;
+        [SerializeField] private string m_Path; // path relative to the project folder
+        [SerializeField] private LocationType m_Type;
 
         public string Filename
         {
@@ -46,13 +46,13 @@ namespace Unity.ProjectAuditor.Editor.Utils
             }
         }
 
-        public Location(string path, LocationType type = LocationType.Setting)
+        internal Location(string path, LocationType type = LocationType.Setting)
         {
             m_Path = path;
             m_Type = type;
         }
 
-        public Location(string path, int line, LocationType type = LocationType.Asset)
+        internal Location(string path, int line, LocationType type = LocationType.Asset)
         {
             m_Path = path;
             m_Line = line;

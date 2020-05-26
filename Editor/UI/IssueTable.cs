@@ -31,6 +31,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         private List<IssueTableItem> m_TreeViewItemGroups;
         private IssueTableItem[] m_TreeViewItemIssues;
+        private int m_NextId;
         private int m_NumMatchingIssues;
 
         public IssueTable(TreeViewState state, MultiColumnHeader multicolumnHeader,
@@ -40,13 +41,12 @@ namespace Unity.ProjectAuditor.Editor.UI
             m_Config = config;
             m_IssuesFilter = issuesFilter;
             m_GroupByDescription = groupByDescription;
+            m_NextId = 1;
             multicolumnHeader.sortingChanged += OnSortingChanged;
         }
 
         public void AddIssues(ProjectIssue[] issues)
         {
-            var id = 1;
-
             if (m_GroupByDescription)
             {
                 var descriptors = issues.Select(i => i.descriptor).Distinct();
@@ -57,7 +57,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 foreach (var descriptor in descriptors)
                 {
-                    var groupItem = new IssueTableItem(id++, 0, descriptor);
+                    var groupItem = new IssueTableItem(m_NextId++, 0, descriptor);
                     m_TreeViewItemGroups.Add(groupItem);
                 }
             }
@@ -68,7 +68,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             foreach (var issue in issues)
             {
                 var depth = m_GroupByDescription ? 1 : 0;
-                var item = new IssueTableItem(id++, depth, issue.name, issue.descriptor, issue);
+                var item = new IssueTableItem(m_NextId++, depth, issue.name, issue.descriptor, issue);
                 itemsList.Add(item);
             }
 
@@ -77,6 +77,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         public void Reset()
         {
+            m_NextId = 1;
             if (m_TreeViewItemGroups != null)
                 m_TreeViewItemGroups.Clear();
             m_TreeViewItemIssues = null;
@@ -108,7 +109,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             }
 
             Profiler.BeginSample("IssueTable.BuildRows");
-            if (m_GroupByDescription)
+            if (m_GroupByDescription && !this.hasSearch)
             {
                 var descriptors = filteredItems.Select(i => i.ProblemDescriptor).Distinct();
                 foreach (var descriptor in descriptors)
@@ -253,6 +254,19 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (issue.location != null && issue.location.IsValid())
             {
                 issue.location.Open();
+            }
+        }
+
+        protected override void SearchChanged(string newSearch)
+        {
+            // auto-expand groups containing selected items
+            foreach (var id in this.state.selectedIDs)
+            {
+                var item = m_TreeViewItemIssues.FirstOrDefault(issue => issue.id == id && issue.parent != null);
+                if (item != null && !this.state.expandedIDs.Contains(item.parent.id))
+                {
+                    this.state.expandedIDs.Add(item.parent.id);
+                }
             }
         }
 
