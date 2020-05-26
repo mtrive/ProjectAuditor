@@ -689,7 +689,6 @@ namespace Unity.ProjectAuditor.Editor.UI
                     {
                         Debug.LogWarning("Unrecognised active mode: couldn't sent analytics event");
                     }
-
                 }
                 else if (shouldRefresh || m_ShouldRefresh || m_AnalysisState == AnalysisState.Completed)
                 {

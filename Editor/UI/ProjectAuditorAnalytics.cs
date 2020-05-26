@@ -141,29 +141,29 @@ namespace Unity.ProjectAuditor.Editor.UI
             switch (uiButton)
             {
                 case UIButton.Analyze:
-                    return"analyze_button_click";
+                    return "analyze_button_click";
                 case UIButton.Export:
-                    return"export_button_click";
+                    return "export_button_click";
                 case UIButton.ApiCalls:
-                    return"api_tab";
+                    return "api_tab";
                 case UIButton.ProjectSettings:
-                    return"settings_tab";
+                    return "settings_tab";
                 case UIButton.AssemblySelect:
-                    return"assembly_button_click";
+                    return "assembly_button_click";
                 case UIButton.AssemblySelectApply:
-                    return"assembly_apply";
+                    return "assembly_apply";
                 case UIButton.AreaSelect:
-                    return"area_button_click";
+                    return "area_button_click";
                 case UIButton.AreaSelectApply:
-                    return"area_apply";
+                    return "area_apply";
                 case UIButton.Mute:
-                    return"mute_button_click";
+                    return "mute_button_click";
                 case UIButton.Unmute:
-                    return"unmute_button_click";
+                    return "unmute_button_click";
                 case UIButton.ShowMuted:
-                    return"show_muted_checkbox";
+                    return "show_muted_checkbox";
                 case UIButton.OnlyCriticalIssues:
-                    return"only_hotpath_checkbox";
+                    return "only_hotpath_checkbox";
                 default:
                     Debug.LogFormat("SendUIButtonEvent: Unsupported button type : {0}", uiButton);
                     return "";
@@ -349,50 +349,50 @@ namespace Unity.ProjectAuditor.Editor.UI
         }
 
         // -------------------------------------------------------------------------------------------------------------
-         public class Analytic
-         {
-             private double m_StartTime;
-             private float m_DurationInSeconds;
-             private Int64 m_Timestamp;
-             private bool m_Blocking;
+        public class Analytic
+        {
+            private double m_StartTime;
+            private float m_DurationInSeconds;
+            private Int64 m_Timestamp;
+            private bool m_Blocking;
 
-             public Analytic()
-             {
-                 m_StartTime = EditorApplication.timeSinceStartup;
-                 m_DurationInSeconds = 0;
-                 m_Timestamp = (Int64)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
-                 m_Blocking = true;
-             }
+            public Analytic()
+            {
+                m_StartTime = EditorApplication.timeSinceStartup;
+                m_DurationInSeconds = 0;
+                m_Timestamp = (Int64)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
+                m_Blocking = true;
+            }
 
-             public void End()
-             {
-                 m_DurationInSeconds = (float)(EditorApplication.timeSinceStartup - m_StartTime);
-             }
+            public void End()
+            {
+                m_DurationInSeconds = (float)(EditorApplication.timeSinceStartup - m_StartTime);
+            }
 
-             public double GetStartTime()
-             {
-                 return m_StartTime;
-             }
+            public double GetStartTime()
+            {
+                return m_StartTime;
+            }
 
-             public float GetDurationInSeconds()
-             {
-                 return m_DurationInSeconds;
-             }
+            public float GetDurationInSeconds()
+            {
+                return m_DurationInSeconds;
+            }
 
-             public Int64 GetTimestamp()
-             {
-                 return m_Timestamp;
-             }
+            public Int64 GetTimestamp()
+            {
+                return m_Timestamp;
+            }
 
-             public bool GetBlocking()
-             {
-                 return m_Blocking;
-             }
-         }
+            public bool GetBlocking()
+            {
+                return m_Blocking;
+            }
+        }
 
-         static public Analytic BeginAnalytic()
-         {
-             return new Analytic();
-         }
+        static public Analytic BeginAnalytic()
+        {
+            return new Analytic();
+        }
     }
- }
+}
