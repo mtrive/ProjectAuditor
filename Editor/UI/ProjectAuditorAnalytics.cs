@@ -63,7 +63,6 @@ namespace Unity.ProjectAuditor.Editor.UI
             }
         }
 
-
         [Serializable]
         struct ProjectAuditorUIButtonEventWithKeyValues
         {
@@ -131,8 +130,6 @@ namespace Unity.ProjectAuditor.Editor.UI
                 duration = SecondsToTicks(analytic.GetDurationInSeconds());
                 ts = analytic.GetTimestamp();
                 issue_stats = payload;
-
-                Debug.Log(string.Format("TS {0}", ts));
             }
         }
 
@@ -191,11 +188,8 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         static IssueStats[] CollectSelectionStats(IssueTableItem[] selectedItems)
         {
-
             var selectionsDict = new Dictionary<int, IssueStats>();
-
             var selectedRoots = selectedItems.Where(item => item.hasChildren);
-
             var selectedChildren = selectedItems.Where(item => item.parent != null);
 
             foreach (var rootItem in selectedRoots)
