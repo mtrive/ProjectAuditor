@@ -64,7 +64,7 @@ namespace Unity.ProjectAuditor.Editor.UI
         private string[] m_ModeNames;
         private ProjectAuditor m_ProjectAuditor;
         private bool m_ShouldRefresh = false;
-        private ProjectAuditorAnalytics.Analytic m_analyzeButtonAnalytic;
+        private ProjectAuditorAnalytics.Analytic m_AnalyzeButtonAnalytic;
 
         // UI
         private readonly List<AnalysisView> m_AnalysisViews = new List<AnalysisView>();
@@ -218,7 +218,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         private void Analyze()
         {
-            m_analyzeButtonAnalytic = ProjectAuditorAnalytics.BeginAnalytic();
+            m_AnalyzeButtonAnalytic = ProjectAuditorAnalytics.BeginAnalytic();
 
             m_ShouldRefresh = true;
             m_AnalysisState = AnalysisState.InProgress;
@@ -276,7 +276,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 m_AnalysisState = AnalysisState.Valid;
 
-                ProjectAuditorAnalytics.SendUIButtonEventWithAnalyzeSummary(ProjectAuditorAnalytics.UIButton.Analyze, m_analyzeButtonAnalytic, m_ProjectReport);
+                ProjectAuditorAnalytics.SendUIButtonEventWithAnalyzeSummary(ProjectAuditorAnalytics.UIButton.Analyze, m_AnalyzeButtonAnalytic, m_ProjectReport);
             }
 
             m_ActiveIssueTable.Reload();
@@ -677,11 +677,11 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                     RefreshDisplay();
 
-                    if (m_ActiveModeIndex == 0)
+                    if (m_ActiveModeIndex == (int)IssueCategory.ApiCalls)
                     {
                         ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ApiCalls, analytic);
                     }
-                    else if (m_ActiveModeIndex == 1)
+                    else if (m_ActiveModeIndex == (int)IssueCategory.ProjectSettings)
                     {
                         ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ProjectSettings, analytic);
                     }

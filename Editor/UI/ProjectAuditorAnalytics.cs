@@ -31,8 +31,6 @@ namespace Unity.ProjectAuditor.Editor.UI
         {
             Analyze,
             Export,
-            ApiCalls,
-            ProjectSettings,
             AssemblySelect,
             AssemblySelectApply,
             AreaSelect,
@@ -41,6 +39,9 @@ namespace Unity.ProjectAuditor.Editor.UI
             Unmute,
             ShowMuted,
             OnlyCriticalIssues,
+
+            ApiCalls = 100,
+            ProjectSettings,
         };
 
         // -------------------------------------------------------------------------------------------------------------
@@ -255,7 +256,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             int numScriptIssues = scriptIssues.Length;
             for (int i = 0; i < numScriptIssues; ++i)
             {
-                ProblemDescriptor descriptor = scriptIssues[i].descriptor;
+                var descriptor = scriptIssues[i].descriptor;
 
                 int id = descriptor.id;
                 IssueStats stats;
@@ -286,8 +287,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (s_EnableAnalytics)
             {
 #if UNITY_2018_1_OR_NEWER
-                ProjectAuditorUIButtonEvent uiButtonEvent =
-                    new ProjectAuditorUIButtonEvent(GetButtonName(uiButton), analytic);
+                var uiButtonEvent = new ProjectAuditorUIButtonEvent(GetButtonName(uiButton), analytic);
 
                 AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
@@ -303,8 +303,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (s_EnableAnalytics)
             {
 #if UNITY_2018_1_OR_NEWER
-                ProjectAuditorUIButtonEventWithKeyValues uiButtonEvent =
-                    new ProjectAuditorUIButtonEventWithKeyValues(GetButtonName(uiButton), analytic, payload);
+                var uiButtonEvent = new ProjectAuditorUIButtonEventWithKeyValues(GetButtonName(uiButton), analytic, payload);
 
                 AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
@@ -322,8 +321,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 #if UNITY_2018_1_OR_NEWER
                 var payload = CollectSelectionStats(selectedItems);
 
-                ProjectAuditorUIButtonEventWithIssueStats uiButtonEvent =
-                    new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
+                var uiButtonEvent = new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
 
                 AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
@@ -341,8 +339,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 #if UNITY_2018_1_OR_NEWER
                 var payload = GetScriptIssuesSummary(projectReport);
 
-                ProjectAuditorUIButtonEventWithIssueStats uiButtonEvent =
-                    new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
+                var uiButtonEvent = new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
 
                 AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
