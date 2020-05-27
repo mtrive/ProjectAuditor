@@ -35,8 +35,4 @@ Icon?
 ehthumbs.db
 [Tt]humbs.db
 .npmrc
-Editor/CodeAnalysis/.idea/.idea.CodeAnalysis.dir/.idea/contentModel.xml
-Editor/CodeAnalysis/.idea/.idea.CodeAnalysis.dir/.idea/indexLayout.xml
-Editor/CodeAnalysis/.idea/.idea.CodeAnalysis.dir/.idea/modules.xml
-Editor/CodeAnalysis/.idea/.idea.CodeAnalysis.dir/.idea/workspace.xml
-Editor/CodeAnalysis/.idea/.idea.CodeAnalysis.dir/riderModule.iml
+.idea*
