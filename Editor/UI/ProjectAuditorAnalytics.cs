@@ -21,7 +21,7 @@ namespace Unity.ProjectAuditor.Editor.UI
         public static void EnableAnalytics()
         {
 #if UNITY_2018_1_OR_NEWER
-            AnalyticsResult result = EditorAnalytics.RegisterEventWithLimit(k_EventTopicName, k_MaxEventsPerHour, k_MaxEventItems, k_VendorKey);
+            var result = EditorAnalytics.RegisterEventWithLimit(k_EventTopicName, k_MaxEventsPerHour, k_MaxEventItems, k_VendorKey);
             if (result == AnalyticsResult.Ok)
                 s_EnableAnalytics = true;
 #endif
@@ -91,8 +91,8 @@ namespace Unity.ProjectAuditor.Editor.UI
                 if (payload != null && payload.Count > 0)
                 {
                     action_params = new EventKeyValue[payload.Count];
-                    int i = 0;
-                    foreach (KeyValuePair<string, string> kvp in payload)
+                    var i = 0;
+                    foreach (var kvp in payload)
                     {
                         action_params[i].key = kvp.Key;
                         action_params[i].value = kvp.Value;
@@ -195,7 +195,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
             foreach (var rootItem in selectedRoots)
             {
-                int id = rootItem.ProblemDescriptor.id;
+                var id = rootItem.ProblemDescriptor.id;
                 IssueStats issueStats;
                 if (!selectionsDict.TryGetValue(id, out issueStats))
                 {
@@ -216,7 +216,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
             foreach (var childItem in selectedChildren)
             {
-                int id = childItem.ProblemDescriptor.id;
+                var id = childItem.ProblemDescriptor.id;
                 IssueStats summary;
                 if (!selectionsDict.TryGetValue(id, out summary))
                 {
@@ -253,12 +253,12 @@ namespace Unity.ProjectAuditor.Editor.UI
             var statsDict = new Dictionary<int, IssueStats>();
 
             var scriptIssues = projectReport.GetIssues(IssueCategory.ApiCalls);
-            int numScriptIssues = scriptIssues.Length;
-            for (int i = 0; i < numScriptIssues; ++i)
+            var numScriptIssues = scriptIssues.Length;
+            for (var i = 0; i < numScriptIssues; ++i)
             {
                 var descriptor = scriptIssues[i].descriptor;
 
-                int id = descriptor.id;
+                var id = descriptor.id;
                 IssueStats stats;
                 if (!statsDict.TryGetValue(id, out stats))
                 {
@@ -289,7 +289,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 #if UNITY_2018_1_OR_NEWER
                 var uiButtonEvent = new ProjectAuditorUIButtonEvent(GetButtonName(uiButton), analytic);
 
-                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                var result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
 #endif
             }
@@ -305,7 +305,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 #if UNITY_2018_1_OR_NEWER
                 var uiButtonEvent = new ProjectAuditorUIButtonEventWithKeyValues(GetButtonName(uiButton), analytic, payload);
 
-                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                var result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
 #endif
             }
@@ -323,7 +323,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 var uiButtonEvent = new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
 
-                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                var result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
 #endif
             }
@@ -341,7 +341,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 var uiButtonEvent = new ProjectAuditorUIButtonEventWithIssueStats(GetButtonName(uiButton), analytic, payload);
 
-                AnalyticsResult result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
+                var result = EditorAnalytics.SendEventWithLimit(k_EventTopicName, uiButtonEvent);
                 return (result == AnalyticsResult.Ok);
 #endif
             }
