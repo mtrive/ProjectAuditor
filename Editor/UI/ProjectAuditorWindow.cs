@@ -945,17 +945,6 @@ namespace Unity.ProjectAuditor.Editor.UI
             return wnd;
         }
 
-        // private static GUIStyle GetStyle(string styleName)
-        // {
-        //     GUIStyle s = GUI.skin.FindStyle(styleName) ?? EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle(styleName);
-        //     if (s == null)
-        //     {
-        //         Debug.LogError("Missing built-in guistyle " + styleName);
-        //         //s = GUISkin.error;
-        //     }
-        //     return s;
-        // }
-
         // UI styles and layout
         private static class LayoutSize
         {
