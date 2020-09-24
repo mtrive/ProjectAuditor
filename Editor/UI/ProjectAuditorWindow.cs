@@ -333,7 +333,11 @@ namespace Unity.ProjectAuditor.Editor.UI
                     Export((issue) => { return Match(issue); });
                     return;
                 case ExportMode.Selected:
-                    // TODO
+                    var selectedItems = m_ActiveIssueTable.GetSelectedItems();
+                    Export(issue =>
+                    {
+                        return selectedItems.Any(item => item.Find(issue));
+                    });
                     return;
             }
         }
