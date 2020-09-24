@@ -90,7 +90,7 @@ class MyClass
             using (var file = new StreamReader(path))
             {
                 var line = file.ReadLine();
-                Assert.True(line.Equals("Issue,Message,Area,Path"));
+                Assert.True(line.Equals("Category,Issue,Description,Area,Path"));
 
                 var expectedSettingsIssueLine = string.Format("{0},{1},{2},{3}", settingsIssue.descriptor.description,
                     settingsIssue.description,
@@ -108,6 +108,34 @@ class MyClass
 
             Assert.True(settingsIssueFound);
             Assert.True(scriptIssueFound);
+        }
+
+        [Test]
+        public void FilteredReportIsExported()
+        {
+            // disabling stripEngineCode will be reported as a ProjectSettings issue
+            PlayerSettings.stripEngineCode = false;
+
+            var projectAuditor = new Unity.ProjectAuditor.Editor.ProjectAuditor();
+            var projectReport = projectAuditor.Audit();
+
+            const string path = "ProjectAuditor_Report.csv";
+
+            // let's assume we are only interested in exporting project settings
+            projectReport.Export(path, issue => issue.category == IssueCategory.ProjectSettings);
+            Assert.True(File.Exists(path));
+
+            using (var file = new StreamReader(path))
+            {
+                var line = file.ReadLine();
+                Assert.True(line.Equals("Category,Issue,Description,Area,Path"));
+
+                while (file.Peek() >= 0)
+                {
+                    line = file.ReadLine();
+                    Assert.True(line.StartsWith(IssueCategory.ProjectSettings.ToString()));
+                }
+            }
         }
     }
 }

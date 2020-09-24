@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using UnityEngine;
 
@@ -57,14 +58,14 @@ namespace Unity.ProjectAuditor.Editor
         /// <summary>
         /// Export report to json format
         /// </summary>
-        public void Export(string reportPath)
+        public void Export(string reportPath, Func<ProjectIssue, bool> match = null)
         {
             var writer = new StreamWriter(reportPath);
-            writer.WriteLine("Issue,Message,Area,Path");
+            writer.WriteLine("Category,Issue,Description,Area,Path");
 
             for (IssueCategory category = 0; category < IssueCategory.NumCategories; category++)
             {
-                var issues = GetIssues(category);
+                var issues = GetIssues(category).Where(i => match == null || match(i));
 
                 foreach (var issue in issues)
                 {
@@ -72,6 +73,7 @@ namespace Unity.ProjectAuditor.Editor
                     if (category != IssueCategory.ProjectSettings)
                         path += ":" + issue.line;
                     writer.WriteLine(
+                        issue.category + "," +
                         issue.descriptor.description + "," +
                         issue.description + "," +
                         issue.descriptor.area + "," +

@@ -33,6 +33,13 @@ namespace Unity.ProjectAuditor.Editor.UI
             "Load Times"
         };
 
+        enum ExportMode
+        {
+            All = 0,
+            Filtered = 1,
+            Selected
+        }
+
         private static readonly string NoIssueSelectedText = "No issue selected";
 
         private readonly AnalysisViewDescriptor[] m_AnalysisViewDescriptors =
@@ -124,7 +131,8 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (!m_ProjectAuditor.config.DisplayMutedIssues)
             {
                 UnityEngine.Profiling.Profiler.BeginSample("IsMuted");
-                var muted = m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) == Rule.Action.None;
+                var muted = m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) ==
+                    Rule.Action.None;
                 UnityEngine.Profiling.Profiler.EndSample();
                 if (muted)
                     return false;
@@ -244,6 +252,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                         {
                             view.AddIssues(newIssues);
                         }
+
                         newIssues.Clear();
 
                         if (completed)
@@ -276,7 +285,8 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 m_AnalysisState = AnalysisState.Valid;
 
-                ProjectAuditorAnalytics.SendUIButtonEventWithAnalyzeSummary(ProjectAuditorAnalytics.UIButton.Analyze, m_AnalyzeButtonAnalytic, m_ProjectReport);
+                ProjectAuditorAnalytics.SendUIButtonEventWithAnalyzeSummary(ProjectAuditorAnalytics.UIButton.Analyze,
+                    m_AnalyzeButtonAnalytic, m_ProjectReport);
             }
 
             m_ActiveIssueTable.Reload();
@@ -287,14 +297,61 @@ namespace Unity.ProjectAuditor.Editor.UI
             OnEnable();
         }
 
-        private void Export()
+        private static bool ButtonWithDropdownList(GUIContent content, string[] buttonNames, GenericMenu.MenuFunction2 callback, params GUILayoutOption[] options)
         {
+            var style = GUI.skin.FindStyle("DropDownButton");
+            var rect = GUILayoutUtility.GetRect(content, style, options);
+
+            var dropDownRect = rect;
+            const float kDropDownButtonWidth = 20f;
+            dropDownRect.xMin = dropDownRect.xMax - kDropDownButtonWidth;
+
+            if (Event.current.type == EventType.MouseDown && dropDownRect.Contains(Event.current.mousePosition))
+            {
+                var menu = new GenericMenu();
+                for (int i = 0; i != buttonNames.Length; i++)
+                    menu.AddItem(new GUIContent(buttonNames[i]), false, callback, i);
+
+                menu.DropDown(rect);
+                Event.current.Use();
+
+                return false;
+            }
+
+            return GUI.Button(rect, content, style);
+        }
+
+        private void ExportDropDownCallback(object data)
+        {
+            var mode = (ExportMode)data;
+            switch (mode)
+            {
+                case ExportMode.All:
+                    Export();
+                    return;
+                case ExportMode.Filtered:
+                    Export((issue) => { return Match(issue); });
+                    return;
+                case ExportMode.Selected:
+                    // TODO
+                    return;
+            }
+        }
+
+        private void Export(Func<ProjectIssue, bool> match = null)
+        {
+            var analytic = ProjectAuditorAnalytics.BeginAnalytic();
             if (IsAnalysisValid())
             {
                 var path = EditorUtility.SaveFilePanel("Save analysis CSV data", "", "project-auditor-report.csv",
                     "csv");
-                if (path.Length != 0) m_ProjectReport.Export(path);
+                if (path.Length != 0)
+                {
+                    m_ProjectReport.Export(path, issue => m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) !=
+                        Rule.Action.None && (match == null || match(issue)));
+                }
             }
+            ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.Export, analytic);
         }
 
         private void DrawIssues()
@@ -483,7 +540,8 @@ namespace Unity.ProjectAuditor.Editor.UI
 
             var lastEnabled = GUI.enabled;
 
-            GUI.enabled = m_AnalysisState == AnalysisState.Valid && !AssemblySelectionWindow.IsOpen() && m_ActiveAnalysisView.desc.showAssemblySelection;
+            GUI.enabled = m_AnalysisState == AnalysisState.Valid && !AssemblySelectionWindow.IsOpen() &&
+                m_ActiveAnalysisView.desc.showAssemblySelection;
             if (GUILayout.Button(Styles.AssemblyFilterSelect, EditorStyles.miniButton,
                 GUILayout.Width(LayoutSize.FilterOptionsEnumWidth)))
             {
@@ -507,9 +565,11 @@ namespace Unity.ProjectAuditor.Editor.UI
                             m_AssemblyNames);
                     }
 
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.AssemblySelect, analytic);
+                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.AssemblySelect,
+                        analytic);
                 }
             }
+
             GUI.enabled = lastEnabled;
 
             m_AssemblySelectionSummary = GetSelectedAssembliesSummary();
@@ -620,7 +680,9 @@ namespace Unity.ProjectAuditor.Editor.UI
                     {
                         m_ActiveIssueTable.SetSelection(new List<int>());
                     }
-                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Mute, analytic, m_ActiveIssueTable.GetSelectedItems());
+
+                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Mute,
+                        analytic, m_ActiveIssueTable.GetSelectedItems());
                 }
 
                 if (GUILayout.Button(Styles.UnmuteButton, GUILayout.ExpandWidth(true), GUILayout.Width(100)))
@@ -631,7 +693,9 @@ namespace Unity.ProjectAuditor.Editor.UI
                     {
                         ClearRulesForItem(item);
                     }
-                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(ProjectAuditorAnalytics.UIButton.Unmute, analytic, m_ActiveIssueTable.GetSelectedItems());
+
+                    ProjectAuditorAnalytics.SendUIButtonEventWithSelectionSummary(
+                        ProjectAuditorAnalytics.UIButton.Unmute, analytic, m_ActiveIssueTable.GetSelectedItems());
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -650,7 +714,8 @@ namespace Unity.ProjectAuditor.Editor.UI
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                     var payload = new Dictionary<string, string>();
                     payload["selected"] = m_ActiveAnalysisView.desc.showCritical ? "true" : "false";
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.OnlyCriticalIssues, analytic);
+                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.OnlyCriticalIssues,
+                        analytic);
                 }
 
                 bool wasDisplayingMuted = m_ProjectAuditor.config.DisplayMutedIssues;
@@ -662,7 +727,8 @@ namespace Unity.ProjectAuditor.Editor.UI
                     var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                     var payload = new Dictionary<string, string>();
                     payload["selected"] = m_ProjectAuditor.config.DisplayMutedIssues ? "true" : "false";
-                    ProjectAuditorAnalytics.SendUIButtonEventWithKeyValues(ProjectAuditorAnalytics.UIButton.ShowMuted, analytic, payload);
+                    ProjectAuditorAnalytics.SendUIButtonEventWithKeyValues(ProjectAuditorAnalytics.UIButton.ShowMuted,
+                        analytic, payload);
                 }
 
                 EditorGUILayout.EndHorizontal();
@@ -683,7 +749,8 @@ namespace Unity.ProjectAuditor.Editor.UI
                     }
                     else if (m_ActiveModeIndex == (int)IssueCategory.ProjectSettings)
                     {
-                        ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ProjectSettings, analytic);
+                        ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ProjectSettings,
+                            analytic);
                     }
                     else
                     {
@@ -807,11 +874,12 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 GUI.enabled = m_AnalysisState == AnalysisState.Valid;
 
-                if (GUILayout.Button(Styles.ExportButton, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
+                if (ButtonWithDropdownList(Styles.ExportButton, Styles.ExportModeStrings,
+                    ExportDropDownCallback, GUILayout.ExpandWidth(true), GUILayout.Width(80)))
                 {
-                    var analytic = ProjectAuditorAnalytics.BeginAnalytic();
                     Export();
-                    ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.Export, analytic);
+
+                    GUIUtility.ExitGUI();
                 }
 
                 GUI.enabled = true;
@@ -873,6 +941,17 @@ namespace Unity.ProjectAuditor.Editor.UI
             return wnd;
         }
 
+        // private static GUIStyle GetStyle(string styleName)
+        // {
+        //     GUIStyle s = GUI.skin.FindStyle(styleName) ?? EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).FindStyle(styleName);
+        //     if (s == null)
+        //     {
+        //         Debug.LogError("Missing built-in guistyle " + styleName);
+        //         //s = GUISkin.error;
+        //     }
+        //     return s;
+        // }
+
         // UI styles and layout
         private static class LayoutSize
         {
@@ -927,6 +1006,13 @@ namespace Unity.ProjectAuditor.Editor.UI
 
             public static readonly GUIContent CallTreeFoldout =
                 new GUIContent("Inverted Call Hierarchy", "Inverted Call Hierarchy");
+
+            public static readonly string[] ExportModeStrings =
+            {
+                "All",
+                "Filtered",
+                "Selected"
+            };
 
             public static readonly string HelpText =
 @"Project Auditor is an experimental static analysis tool for Unity Projects.
