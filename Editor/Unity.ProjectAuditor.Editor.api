@@ -111,7 +111,7 @@ namespace Unity.ProjectAuditor.Editor
     {
         public int NumTotalIssues { get; }
         public ProjectReport() {}
-        public void Export(string reportPath, System.Func<Unity.ProjectAuditor.Editor.ProjectIssue, bool> match = default(System.Func<Unity.ProjectAuditor.Editor.ProjectIssue, bool>));
+        public void ExportToCSV(string reportPath, System.Func<Unity.ProjectAuditor.Editor.ProjectIssue, bool> match = default(System.Func<Unity.ProjectAuditor.Editor.ProjectIssue, bool>));
         public Unity.ProjectAuditor.Editor.ProjectIssue[] GetIssues(Unity.ProjectAuditor.Editor.IssueCategory category);
         public int GetNumIssues(Unity.ProjectAuditor.Editor.IssueCategory category);
     }

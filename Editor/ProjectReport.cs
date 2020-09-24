@@ -56,12 +56,12 @@ namespace Unity.ProjectAuditor.Editor
         }
 
         /// <summary>
-        /// Export report to json format
+        /// Export report to CSV format
         /// </summary>
-        public void Export(string reportPath, Func<ProjectIssue, bool> match = null)
+        public void ExportToCSV(string reportPath, Func<ProjectIssue, bool> match = null)
         {
             var writer = new StreamWriter(reportPath);
-            writer.WriteLine("Category,Issue,Description,Area,Path");
+            writer.WriteLine(HeaderForCSV());
 
             for (IssueCategory category = 0; category < IssueCategory.NumCategories; category++)
             {
@@ -69,21 +69,28 @@ namespace Unity.ProjectAuditor.Editor
 
                 foreach (var issue in issues)
                 {
-                    var path = issue.relativePath;
-                    if (category != IssueCategory.ProjectSettings)
-                        path += ":" + issue.line;
-                    writer.WriteLine(
-                        issue.category + "," +
-                        issue.descriptor.description + "," +
-                        issue.description + "," +
-                        issue.descriptor.area + "," +
-                        path
-                    );
+                    writer.WriteLine(FormatIssueForCSV(issue));
                 }
             }
 
             writer.Flush();
             writer.Close();
+        }
+
+        internal static string FormatIssueForCSV(ProjectIssue issue)
+        {
+            if (issue.category != IssueCategory.ProjectSettings)
+                return string.Format("{0},\"{1}\",\"{2}\",{3},{4}:{5}", issue.category, issue.descriptor.description,
+                    issue.description,
+                    issue.descriptor.area, issue.relativePath, issue.line);
+            return string.Format("{0},\"{1}\",\"{2}\",{3},{4}", issue.category, issue.descriptor.description,
+                issue.description,
+                issue.descriptor.area, issue.relativePath);
+        }
+
+        internal static string HeaderForCSV()
+        {
+            return "Category,Issue,Description,Area,Path";
         }
     }
 }

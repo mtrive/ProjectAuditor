@@ -347,7 +347,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     "csv");
                 if (path.Length != 0)
                 {
-                    m_ProjectReport.Export(path, issue => m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) !=
+                    m_ProjectReport.ExportToCSV(path, issue => m_ProjectAuditor.config.GetAction(issue.descriptor, issue.callingMethod) !=
                         Rule.Action.None && (match == null || match(issue)));
                 }
             }
