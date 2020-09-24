@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
+using UnityEditor;
 using UnityEngine;
 
 namespace Unity.ProjectAuditor.Editor
@@ -75,6 +76,8 @@ namespace Unity.ProjectAuditor.Editor
 
             writer.Flush();
             writer.Close();
+
+            EditorUtility.RevealInFinder(reportPath);
         }
 
         internal static string FormatIssueForCSV(ProjectIssue issue)
