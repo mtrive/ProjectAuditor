@@ -51,7 +51,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             },
             new AnalysisViewDescriptor
             {
-                category = IssueCategory.ApiCalls,
+                category = IssueCategory.Code,
                 name = "Code",
                 groupByDescription = true,
                 showAssemblySelection = true,
@@ -284,7 +284,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (m_AnalysisState == AnalysisState.Completed)
             {
                 // update list of assembly names
-                var scriptIssues = m_ProjectReport.GetIssues(IssueCategory.ApiCalls);
+                var scriptIssues = m_ProjectReport.GetIssues(IssueCategory.Code);
                 m_AssemblyNames = scriptIssues.Select(i => i.assembly).Distinct().OrderBy(str => str).ToArray();
                 UpdateAssemblySelection();
 
@@ -752,7 +752,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                     RefreshDisplay();
 
-                    if (m_ActiveModeIndex == (int)IssueCategory.ApiCalls)
+                    if (m_ActiveModeIndex == (int)IssueCategory.Code)
                     {
                         ProjectAuditorAnalytics.SendUIButtonEvent(ProjectAuditorAnalytics.UIButton.ApiCalls, analytic);
                     }
