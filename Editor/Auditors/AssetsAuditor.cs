@@ -13,10 +13,10 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         private static readonly ProblemDescriptor s_Descriptor = new ProblemDescriptor
             (
             302000,
-            "Resources Folder",
+            "Resources folder asset",
             Area.BuildSize,
-            "",
-            ""
+            "The Resources folder is a common source of many problems in Unity projects. Improper use of the Resources folder can bloat the size of a project’s build, lead to uncontrollable excessive memory utilization, and significantly increase application startup times.",
+            "Use AssetBundles when possible"
             );
 
         private List<ProblemDescriptor> m_ProblemDescriptors = new List<ProblemDescriptor>();
@@ -51,7 +51,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             var allAssetPaths = AssetDatabase.GetAllAssetPaths();
             var allResources = allAssetPaths.Where(path => path.IndexOf("/resources/", StringComparison.OrdinalIgnoreCase) >= 0);
             var allPlayerResources = allResources.Where(path => path.IndexOf("/editor/", StringComparison.OrdinalIgnoreCase) == -1);
-            // var allPlayerResourcesFolders = allPlayerResources.Select(Path.GetDirectoryName).Distinct();
+
             foreach (var dir in allPlayerResources)
             {
                 var location = new Location(dir, LocationType.Asset);
@@ -63,17 +63,6 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                         location
                     )
                 );
-
-                // var paths = Directory.GetFiles(dir).Where(x => !x.Contains(".meta"));
-                // foreach (var path in paths)
-                //     onIssueFound(new ProjectIssue
-                //         (
-                //             s_Descriptor,
-                //             path,
-                //             IssueCategory.Assets,
-                //             new Location(path)
-                //         )
-                //     );
             }
         }
     }

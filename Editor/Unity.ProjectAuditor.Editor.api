@@ -37,20 +37,10 @@ namespace Unity.ProjectAuditor.Editor
 
     public enum IssueCategory
     {
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-        public const Unity.ProjectAuditor.Editor.IssueCategory ApiCalls = 0;
-=======
-        public const Unity.ProjectAuditor.Editor.IssueCategory Code = 0;
->>>>>>> master
-        public const Unity.ProjectAuditor.Editor.IssueCategory NumCategories = 2;
-        public const Unity.ProjectAuditor.Editor.IssueCategory ProjectSettings = 1;
-=======
-        public const Unity.ProjectAuditor.Editor.IssueCategory Assets = 1;
-        public const Unity.ProjectAuditor.Editor.IssueCategory Code = 0;
+        public const Unity.ProjectAuditor.Editor.IssueCategory Assets = 0;
+        public const Unity.ProjectAuditor.Editor.IssueCategory Code = 1;
         public const Unity.ProjectAuditor.Editor.IssueCategory NumCategories = 3;
         public const Unity.ProjectAuditor.Editor.IssueCategory ProjectSettings = 2;
->>>>>>> Stashed changes
         public int value__;
     }
 
