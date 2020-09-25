@@ -7,9 +7,9 @@ namespace Unity.ProjectAuditor.Editor
     {
         public const Unity.ProjectAuditor.Editor.Area All = 5;
         public const Unity.ProjectAuditor.Editor.Area BuildSize = 3;
-        [System.ComponentModel.Description(@"asd")] public const Unity.ProjectAuditor.Editor.Area CPU = 0;
+        public const Unity.ProjectAuditor.Editor.Area CPU = 0;
         public const Unity.ProjectAuditor.Editor.Area GPU = 1;
-        [System.ComponentModel.Description(@"Minchia")] public const Unity.ProjectAuditor.Editor.Area LoadTimes = 4;
+        public const Unity.ProjectAuditor.Editor.Area LoadTimes = 4;
         public const Unity.ProjectAuditor.Editor.Area Memory = 2;
         public int value__;
     }
