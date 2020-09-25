@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Unity.ProjectAuditor.Editor.CodeAnalysis;
 using Unity.ProjectAuditor.Editor.Utils;
 
@@ -9,6 +10,7 @@ namespace Unity.ProjectAuditor.Editor
     /// </summary>
     public enum Area
     {
+        [Description("asd")]
         /// <summary>
         /// CPU Performance
         /// </summary>
@@ -29,6 +31,7 @@ namespace Unity.ProjectAuditor.Editor
         /// </summary>
         BuildSize,
 
+        [Description("Minchia")]
         /// <summary>
         /// Load times
         /// </summary>
@@ -43,6 +46,7 @@ namespace Unity.ProjectAuditor.Editor
     public enum IssueCategory
     {
         ApiCalls,
+        Assets,
         ProjectSettings,
         NumCategories
     }
@@ -53,6 +57,16 @@ namespace Unity.ProjectAuditor.Editor
     [Serializable]
     public class ProjectIssue
     {
+        private static readonly string[] m_AreaNames =
+        {
+            "CPU",
+            "GPU",
+            "Memory",
+            "Build Size",
+            "Load Times"
+        };
+
+
         public string assembly;
         public CallTreeNode callTree;
         public IssueCategory category;
