@@ -14,11 +14,11 @@ namespace Unity.ProjectAuditor.Editor.UI
         public enum Column
         {
             Description = 0,
-            AssetType,
             Priority,
             Area,
-            Filename,
             Path,
+            Filename,
+            FileType,
             Assembly,
 
             Count
@@ -154,8 +154,10 @@ namespace Unity.ProjectAuditor.Editor.UI
                 CellGUI(args.GetCellRect(i), args.item, args.GetColumn(i), ref args);
         }
 
-        private void CellGUI(Rect cellRect, TreeViewItem treeViewItem, int column, ref RowGUIArgs args)
+        private void CellGUI(Rect cellRect, TreeViewItem treeViewItem, int columnIndex, ref RowGUIArgs args)
         {
+            var column = m_Desc.columnDescriptors[columnIndex];
+
             // only indent first column
             if ((int)Column.Description == column)
             {
@@ -258,7 +260,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                             EditorGUI.LabelField(cellRect, new GUIContent(issue.assembly, issue.assembly));
 
                         break;
-                    case Column.AssetType:
+                    case Column.FileType:
                         if (issue.location.Path != string.Empty)
                         {
                             var ext = issue.location.Extension;
@@ -471,7 +473,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                                     ? secondItem.ProjectIssue.assembly
                                     : string.Empty;
                                 break;
-                            case Column.AssetType:
+                            case Column.FileType:
                                 firstString = firstItem.ProjectIssue != null ? firstItem.ProjectIssue.location.Extension : string.Empty;
                                 secondString = secondItem.ProjectIssue != null ? secondItem.ProjectIssue.location.Extension : string.Empty;
                                 break;
