@@ -261,7 +261,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     case Column.AssetType:
                         if (issue.location.Path != string.Empty)
                         {
-                            var ext = Path.GetExtension(issue.location.Path);
+                            var ext = issue.location.Extension;
                             if (issue.category == IssueCategory.Assets)
                                 ext = ext.Substring(1);
                             EditorGUI.LabelField(cellRect, new GUIContent(ext, ext));
@@ -472,8 +472,8 @@ namespace Unity.ProjectAuditor.Editor.UI
                                     : string.Empty;
                                 break;
                             case Column.AssetType:
-                                firstString = firstItem.ProjectIssue != null ? Path.GetExtension(firstItem.ProjectIssue.location.Path) : string.Empty;
-                                secondString = secondItem.ProjectIssue != null ? Path.GetExtension(secondItem.ProjectIssue.location.Path) : string.Empty;
+                                firstString = firstItem.ProjectIssue != null ? firstItem.ProjectIssue.location.Extension : string.Empty;
+                                secondString = secondItem.ProjectIssue != null ? secondItem.ProjectIssue.location.Extension : string.Empty;
                                 break;
                             case Column.Priority:
                                 firstString = firstItem.ProjectIssue != null ? firstItem.ProjectIssue.isPerfCriticalContext.ToString() : string.Empty;
