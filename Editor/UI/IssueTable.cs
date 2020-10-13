@@ -359,7 +359,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             for (var i = 0; i < sortedColumns.Length; i++)
                 columnAscending[i] = multiColumnHeader.IsSortedAscending(sortedColumns[i]);
 
-            var root = new ItemTree(null);
+            var root = new ItemTree(null, m_Desc);
             var stack = new Stack<ItemTree>();
             stack.Push(root);
             foreach (var row in rows)
@@ -378,7 +378,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 if (row.depth > activeParentDepth)
                 {
-                    var t = new ItemTree(r);
+                    var t = new ItemTree(r, m_Desc);
                     stack.Peek().AddChild(t);
                     stack.Push(t);
                 }
@@ -398,11 +398,13 @@ namespace Unity.ProjectAuditor.Editor.UI
         {
             private readonly List<ItemTree> m_Children;
             private readonly IssueTableItem m_Item;
+            private readonly AnalysisViewDescriptor m_ViewDescriptor;
 
-            public ItemTree(IssueTableItem i)
+            public ItemTree(IssueTableItem i, AnalysisViewDescriptor viewDescriptor)
             {
                 m_Item = i;
                 m_Children = new List<ItemTree>();
+                m_ViewDescriptor = viewDescriptor;
             }
 
             public int Depth
@@ -438,8 +440,8 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                         string firstString;
                         string secondString;
-
-                        switch ((Column)columnSortOrder[i])
+                        var columnEnum = m_ViewDescriptor.columnDescriptors[columnSortOrder[i]];
+                        switch (columnEnum)
                         {
                             case Column.Description:
                                 firstString = firstItem.GetDisplayName();
