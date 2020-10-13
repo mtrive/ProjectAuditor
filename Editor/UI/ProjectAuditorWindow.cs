@@ -101,6 +101,8 @@ namespace Unity.ProjectAuditor.Editor.UI
         private CallHierarchyView m_CallHierarchyView;
         private CallTreeNode m_CurrentCallTree;
         private SearchField m_SearchField;
+        private bool m_SearchCallTree = false;
+        private bool m_SearchMatchCase = false;
 
         // Serialized fields
         [SerializeField] private int m_ActiveModeIndex;
@@ -165,6 +167,9 @@ namespace Unity.ProjectAuditor.Editor.UI
                 m_ProjectAuditor.config.DisplayOnlyCriticalIssues &&
                 !issue.isPerfCriticalContext)
                 return false;
+
+            if (m_ActiveAnalysisView.desc.showInvertedCallTree && m_SearchCallTree && MatchesSearch(issue.callTree))
+                return true;
 
             if (!string.IsNullOrEmpty(m_SearchText))
                 if (!MatchesSearch(issue.description) &&
@@ -256,10 +261,23 @@ namespace Unity.ProjectAuditor.Editor.UI
             return m_AnalysisState != AnalysisState.NotStarted;
         }
 
-        private bool MatchesSearch(string field)
+        private bool MatchesSearch(string text)
         {
-            return !string.IsNullOrEmpty(field) &&
-                field.IndexOf(m_SearchText, StringComparison.CurrentCultureIgnoreCase) >= 0;
+            return !string.IsNullOrEmpty(text) &&
+                text.IndexOf(m_SearchText, m_SearchMatchCase ? StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase) >= 0;
+        }
+
+        private bool MatchesSearch(CallTreeNode callTreeNode)
+        {
+            if (MatchesSearch(callTreeNode.methodName))
+                return true;
+            for (int i = 0; i < callTreeNode.GetNumChildren(); i++)
+            {
+                if (MatchesSearch(callTreeNode.GetChild(i)))
+                    return true;
+            }
+
+            return false;
         }
 
         private void Analyze()
@@ -682,15 +700,22 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 EditorGUI.BeginChangeCheck();
 
-                var searchRect =
-                    GUILayoutUtility.GetRect(1, 1, 18, 18, GUILayout.ExpandWidth(true), GUILayout.Width(200));
                 EditorGUILayout.BeginHorizontal();
 
+                EditorGUILayout.LabelField("Search :", GUILayout.Width(80));
                 if (m_SearchField == null) m_SearchField = new SearchField();
 
-                m_SearchText = m_SearchField.OnGUI(searchRect, m_SearchText);
+                m_SearchText = m_SearchField.OnGUI(m_SearchText, GUILayout.Width(180));
 
                 m_ActiveIssueTable.searchString = m_SearchText;
+
+                m_SearchMatchCase = EditorGUILayout.ToggleLeft("Match Case",
+                    m_SearchMatchCase, GUILayout.Width(160));
+
+                GUI.enabled = m_ActiveAnalysisView.desc.showInvertedCallTree;
+                m_SearchCallTree = EditorGUILayout.ToggleLeft("Call Tree Methods",
+                    m_SearchCallTree, GUILayout.Width(160));
+                GUI.enabled = true;
 
                 EditorGUILayout.EndHorizontal();
 
@@ -700,7 +725,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 bool wasShowingCritical = m_ProjectAuditor.config.DisplayOnlyCriticalIssues;
                 m_ProjectAuditor.config.DisplayOnlyCriticalIssues = EditorGUILayout.ToggleLeft("Only Critical Issues",
-                    m_ProjectAuditor.config.DisplayOnlyCriticalIssues, GUILayout.Width(160));
+                    m_ProjectAuditor.config.DisplayOnlyCriticalIssues, GUILayout.Width(180));
                 GUI.enabled = true;
 
                 if (wasShowingCritical != m_ProjectAuditor.config.DisplayOnlyCriticalIssues)
