@@ -169,7 +169,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             var item = treeViewItem as IssueTableItem;
             if (item == null)
             {
-                if ((Column)column == Column.Description)
+                if (column == Column.Description)
                     EditorGUI.LabelField(cellRect, new GUIContent(treeViewItem.displayName, treeViewItem.displayName));
                 return;
             }
@@ -185,7 +185,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (rule != null && rule.action == Rule.Action.None) GUI.enabled = false;
 
             if (item.hasChildren)
-                switch ((Column)column)
+                switch (column)
                 {
                     case Column.Description:
                         EditorGUI.LabelField(cellRect, new GUIContent(item.GetDisplayName(), item.GetDisplayName()));
@@ -195,7 +195,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                         break;
                 }
             else
-                switch ((Column)column)
+                switch (column)
                 {
                     case Column.Priority:
                         if (issue.isPerfCriticalContext)

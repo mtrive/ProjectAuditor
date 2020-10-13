@@ -96,7 +96,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         private static class Styles
         {
-            public static readonly ColumnStyle[] Columns = new[]
+            public static readonly ColumnStyle[] Columns =
             {
                 new ColumnStyle
                 {
