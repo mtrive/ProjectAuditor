@@ -735,10 +735,14 @@ namespace Unity.ProjectAuditor.Editor.UI
                 m_SearchMatchCase = EditorGUILayout.ToggleLeft("Match Case",
                     m_SearchMatchCase, GUILayout.Width(160));
 
-                GUI.enabled = m_ActiveAnalysisView.desc.showInvertedCallTree;
-                m_SearchCallTree = EditorGUILayout.ToggleLeft("Call Tree (slow)",
-                    m_SearchCallTree, GUILayout.Width(160));
-                GUI.enabled = true;
+                if (m_DeveloperMode)
+                {
+                    // this is only available in developer mode because it is still too slow at the moment
+                    GUI.enabled = m_ActiveAnalysisView.desc.showInvertedCallTree;
+                    m_SearchCallTree = EditorGUILayout.ToggleLeft("Call Tree (slow)",
+                        m_SearchCallTree, GUILayout.Width(160));
+                    GUI.enabled = true;
+                }
 
                 EditorGUILayout.EndHorizontal();
 
