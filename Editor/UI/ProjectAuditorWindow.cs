@@ -472,13 +472,16 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (m_ActiveAnalysisView.desc.showInvertedCallTree)
             {
                 ProjectIssue issue = null;
-                CallTreeNode callTree = null;
                 if (selectedIssues.Count() == 1)
                 {
                     issue = selectedIssues.First();
-                    if (issue != null && issue.callTree != null)
-                        // get caller sub-tree
-                        callTree = issue.callTree.GetChild();
+                }
+
+                CallTreeNode callTree = null;
+                if (issue != null && issue.callTree != null)
+                {
+                    // get caller sub-tree
+                    callTree = issue.callTree.GetChild();
                 }
 
                 if (m_CurrentCallTree != callTree)
