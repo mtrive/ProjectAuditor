@@ -206,7 +206,6 @@ namespace Unity.ProjectAuditor.Editor.Utils
         public string Path { get; }
         public Unity.ProjectAuditor.Editor.Utils.LocationType Type { get; }
         public bool IsValid();
-        public void Open();
     }
 
     public enum LocationType

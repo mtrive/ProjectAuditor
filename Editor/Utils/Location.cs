@@ -73,23 +73,5 @@ namespace Unity.ProjectAuditor.Editor.Utils
         {
             return !string.IsNullOrEmpty(m_Path);
         }
-
-        public void Open()
-        {
-            if (m_Type == LocationType.Setting)
-            {
-#if UNITY_2018_3_OR_NEWER
-                var window = SettingsService.OpenProjectSettings(m_Path);
-                window.Repaint();
-#endif
-            }
-            else if (File.Exists(m_Path))
-            {
-                UnityEngine.Object obj = AssetDatabase.LoadAssetAtPath<TextAsset>(m_Path);
-                if (obj == null)
-                    obj = AssetDatabase.LoadMainAssetAtPath(m_Path);
-                AssetDatabase.OpenAsset(obj, m_Line);
-            }
-        }
     }
 }
