@@ -1051,7 +1051,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         static void OpenTextFile(Location location)
         {
-            UnityEngine.Object obj = AssetDatabase.LoadAssetAtPath<TextAsset>(location.Path);
+            var obj = AssetDatabase.LoadAssetAtPath<TextAsset>(location.Path);
             if (obj != null)
             {
                 // open text file in the text editor
