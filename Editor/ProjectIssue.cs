@@ -124,7 +124,7 @@ namespace Unity.ProjectAuditor.Editor
                 if (!callTree.HasChildren())
                     return string.Empty;
 
-                return callTree.GetChild().name;
+                return ((CallTreeNode)callTree.GetChild()).name;
             }
         }
 
@@ -132,7 +132,7 @@ namespace Unity.ProjectAuditor.Editor
         {
             get
             {
-                return descriptor.critical || (callTree != null && callTree.IsPerfCriticalContext());
+                return descriptor.critical || (callTree != null && callTree.IsPerfCritical());
             }
         }
 

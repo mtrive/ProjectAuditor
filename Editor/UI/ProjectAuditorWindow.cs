@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Unity.ProjectAuditor.Editor.CodeAnalysis;
 using Unity.ProjectAuditor.Editor.Utils;
@@ -105,8 +104,8 @@ namespace Unity.ProjectAuditor.Editor.UI
         private readonly List<AnalysisView> m_AnalysisViews = new List<AnalysisView>();
         private TreeViewSelection m_AreaSelection;
         private TreeViewSelection m_AssemblySelection;
-        private CallHierarchyView m_CallHierarchyView;
-        private CallTreeNode m_CurrentCallTree;
+        private DependencyView m_CallTreeView;
+        private DependencyNode m_CallTreeRoot;
         private bool m_SearchCallTree = false;
         private bool m_SearchMatchCase = false;
 
@@ -248,8 +247,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 m_AnalysisViews.Add(view);
             }
 
-            m_CallHierarchyView = new CallHierarchyView(new TreeViewState());
-
+            m_CallTreeView = new DependencyView(new TreeViewState());
             RefreshDisplay();
         }
 
@@ -301,7 +299,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 return true;
             for (int i = 0; i < callTreeNode.GetNumChildren(); i++)
             {
-                if (MatchesSearch(callTreeNode.GetChild(i)))
+                if (MatchesSearch(callTreeNode.GetChild(i) as CallTreeNode))
                     return true;
             }
 
@@ -482,18 +480,18 @@ namespace Unity.ProjectAuditor.Editor.UI
                     issue = selectedIssues.First();
                 }
 
-                CallTreeNode callTree = null;
+                DependencyNode callTree = null;
                 if (issue != null && issue.callTree != null)
                 {
                     // get caller sub-tree
                     callTree = issue.callTree.GetChild();
                 }
 
-                if (m_CurrentCallTree != callTree)
+                if (m_CallTreeRoot != callTree)
                 {
-                    m_CallHierarchyView.SetCallTree(callTree);
-                    m_CallHierarchyView.Reload();
-                    m_CurrentCallTree = callTree;
+                    m_CallTreeView.SetRoot(callTree);
+                    m_CallTreeView.Reload();
+                    m_CallTreeRoot = callTree;
                 }
 
                 DrawCallHierarchy(issue, callTree);
@@ -549,7 +547,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawCallHierarchy(ProjectIssue issue, CallTreeNode callTree)
+        private void DrawCallHierarchy(ProjectIssue issue, DependencyNode callTree)
         {
             EditorGUILayout.BeginVertical(GUI.skin.box, GUILayout.Width(LayoutSize.FoldoutWidth));
 
@@ -560,7 +558,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 {
                     var r = EditorGUILayout.GetControlRect(GUILayout.Height(400));
 
-                    m_CallHierarchyView.OnGUI(r);
+                    m_CallTreeView.OnGUI(r);
                 }
                 else if (issue != null)
                 {

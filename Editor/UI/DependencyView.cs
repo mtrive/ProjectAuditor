@@ -1,15 +1,14 @@
 using System.Collections.Generic;
-using Unity.ProjectAuditor.Editor.CodeAnalysis;
 using UnityEditor.IMGUI.Controls;
 
 namespace Unity.ProjectAuditor.Editor.UI
 {
-    internal class CallHierarchyView : TreeView
+    internal class DependencyView : TreeView
     {
-        private readonly Dictionary<int, CallTreeNode> m_CallTreeDictionary = new Dictionary<int, CallTreeNode>();
-        private CallTreeNode m_CallTree;
+        private readonly Dictionary<int, DependencyNode> m_NodeDictionary = new Dictionary<int, DependencyNode>();
+        private DependencyNode m_Root;
 
-        public CallHierarchyView(TreeViewState treeViewState)
+        public DependencyView(TreeViewState treeViewState)
             : base(treeViewState)
         {
             Reload();
@@ -20,10 +19,10 @@ namespace Unity.ProjectAuditor.Editor.UI
             var root = new TreeViewItem {id = 0, depth = -1, displayName = "Hidden Root"};
             var allItems = new List<TreeViewItem>();
 
-            if (m_CallTree != null)
+            if (m_Root != null)
             {
-                m_CallTreeDictionary.Clear();
-                BuildNode(allItems, m_CallTree, 0);
+                m_NodeDictionary.Clear();
+                AddNode(allItems, m_Root, 0);
             }
 
             // Utility method that initializes the TreeViewItem.children and -parent for all items.
@@ -33,33 +32,33 @@ namespace Unity.ProjectAuditor.Editor.UI
             return root;
         }
 
-        public void SetCallTree(CallTreeNode callTree)
+        public void SetRoot(DependencyNode root)
         {
-            m_CallTree = callTree;
+            m_Root = root;
         }
 
-        private void BuildNode(List<TreeViewItem> items, CallTreeNode callTree, int depth)
+        private void AddNode(List<TreeViewItem> items, DependencyNode node, int depth)
         {
             var id = items.Count;
-            items.Add(new TreeViewItem {id = id, depth = depth, displayName = callTree.GetPrettyName(true)});
+            items.Add(new TreeViewItem {id = id, depth = depth, displayName = node.GetPrettyName()}); // TODO add assembly name
 
-            m_CallTreeDictionary.Add(id, callTree);
+            m_NodeDictionary.Add(id, node);
 
             // if the tree is too deep, serialization will exceed the 7 levels limit.
-            if (!callTree.HasValidChildren())
+            if (!node.HasValidChildren())
                 items.Add(new TreeViewItem {id = id + 1, depth = depth + 1, displayName = "<Serialization Limit>"});
             else
-                for (int i = 0; i < callTree.GetNumChildren(); i++)
+                for (int i = 0; i < node.GetNumChildren(); i++)
                 {
-                    BuildNode(items, callTree.GetChild(i), depth + 1);
+                    AddNode(items, node.GetChild(i), depth + 1);
                 }
         }
 
         protected override void DoubleClickedItem(int id)
         {
-            if (m_CallTreeDictionary.ContainsKey(id))
+            if (m_NodeDictionary.ContainsKey(id))
             {
-                var node = m_CallTreeDictionary[id];
+                var node = m_NodeDictionary[id];
                 if (node.location != null)
                     node.location.Open();
             }
