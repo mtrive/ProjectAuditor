@@ -46,7 +46,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 descriptionWithIcon = true,
                 showAssemblySelection = false,
                 showCritical = false,
-                showInvertedCallTree = false,
+                showDependencyView = false,
                 showRightPanels = true,
                 columnDescriptors = new[]
                 {
@@ -64,7 +64,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 descriptionWithIcon = false,
                 showAssemblySelection = true,
                 showCritical = true,
-                showInvertedCallTree = true,
+                showDependencyView = true,
                 showRightPanels = true,
                 columnDescriptors = new[]
                 {
@@ -84,7 +84,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 descriptionWithIcon = false,
                 showAssemblySelection = false,
                 showCritical = false,
-                showInvertedCallTree = false,
+                showDependencyView = false,
                 showRightPanels = true,
                 columnDescriptors = new[]
                 {
@@ -106,6 +106,8 @@ namespace Unity.ProjectAuditor.Editor.UI
         private TreeViewSelection m_AssemblySelection;
         private DependencyView m_CallTreeView;
         private DependencyNode m_CallTreeRoot;
+        private DependencyView m_AssetDependencyView;
+        private DependencyNode m_AssetDependencyRoot;
         private bool m_SearchCallTree = false;
         private bool m_SearchMatchCase = false;
 
@@ -185,9 +187,10 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (MatchesSearch(issue.filename))
                 return true;
 
-            var caller = issue.callTree;
-            if (caller != null)
+            var dependencies = issue.dependencies;
+            if (dependencies != null)
             {
+                var caller = (CallTreeNode)dependencies;
                 // first search entire call tree if option is enabled, otherwise only search caller name
                 if (m_SearchCallTree)
                 {
@@ -248,6 +251,8 @@ namespace Unity.ProjectAuditor.Editor.UI
             }
 
             m_CallTreeView = new DependencyView(new TreeViewState());
+            m_AssetDependencyView = new DependencyView(new TreeViewState());
+
             RefreshDisplay();
         }
 
@@ -472,7 +477,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
             DrawDetailsFoldout(problemDescriptor);
             DrawRecommendationFoldout(problemDescriptor);
-            if (m_ActiveAnalysisView.desc.showInvertedCallTree)
+            if (m_ActiveAnalysisView.desc.showDependencyView)
             {
                 ProjectIssue issue = null;
                 if (selectedIssues.Count() == 1)
@@ -481,10 +486,10 @@ namespace Unity.ProjectAuditor.Editor.UI
                 }
 
                 DependencyNode callTree = null;
-                if (issue != null && issue.callTree != null)
+                if (issue != null && issue.dependencies != null)
                 {
                     // get caller sub-tree
-                    callTree = issue.callTree.GetChild();
+                    callTree = issue.dependencies.GetChild();
                 }
 
                 if (m_CallTreeRoot != callTree)
@@ -748,7 +753,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 if (m_DeveloperMode)
                 {
                     // this is only available in developer mode because it is still too slow at the moment
-                    GUI.enabled = m_ActiveAnalysisView.desc.showInvertedCallTree;
+                    GUI.enabled = m_ActiveAnalysisView.desc.showDependencyView;
                     m_SearchCallTree = EditorGUILayout.ToggleLeft("Call Tree (slow)",
                         m_SearchCallTree, GUILayout.Width(160));
                     GUI.enabled = true;

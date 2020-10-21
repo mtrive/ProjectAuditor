@@ -12,7 +12,6 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
         public string assemblyName;
         public string methodName;
         public string name;
-        public bool perfCriticalContext;
         public string typeName;
 
         internal CallTreeNode(MethodReference methodReference, CallTreeNode caller = null)

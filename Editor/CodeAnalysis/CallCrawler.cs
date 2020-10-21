@@ -53,7 +53,7 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
                         progressBar.AdvanceProgressBar();
 
                     const int depth = 0;
-                    var callTree = issue.callTree;
+                    var callTree = issue.dependencies;
                     BuildHierarchy(callTree.GetChild() as CallTreeNode, depth);
 
                     // temp fix for null location (ScriptAuditor was unable to get sequence point)

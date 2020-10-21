@@ -8,6 +8,7 @@ namespace Unity.ProjectAuditor.Editor
         protected List<DependencyNode> m_Children = new List<DependencyNode>();
 
         public Location location;
+        public bool perfCriticalContext;
 
         public string prettyName
         {

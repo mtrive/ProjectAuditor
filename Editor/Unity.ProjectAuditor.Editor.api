@@ -23,6 +23,7 @@ namespace Unity.ProjectAuditor.Editor
     {
         public Unity.ProjectAuditor.Editor.Utils.Location location;
         protected System.Collections.Generic.List<Unity.ProjectAuditor.Editor.DependencyNode> m_Children;
+        public bool perfCriticalContext;
         public string prettyName { get; }
         protected DependencyNode() {}
         public void AddChild(Unity.ProjectAuditor.Editor.DependencyNode child);
@@ -109,8 +110,8 @@ namespace Unity.ProjectAuditor.Editor
     public class ProjectIssue
     {
         public string assembly;
-        public Unity.ProjectAuditor.Editor.CodeAnalysis.CallTreeNode callTree;
         public Unity.ProjectAuditor.Editor.IssueCategory category;
+        public Unity.ProjectAuditor.Editor.DependencyNode dependencies;
         public string description;
         public Unity.ProjectAuditor.Editor.ProblemDescriptor descriptor;
         public Unity.ProjectAuditor.Editor.Utils.Location location;
@@ -177,7 +178,6 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
         public string assemblyName;
         public string methodName;
         public string name;
-        public bool perfCriticalContext;
         public string typeName;
         public virtual string GetPrettyName();
         public virtual bool IsPerfCritical();
