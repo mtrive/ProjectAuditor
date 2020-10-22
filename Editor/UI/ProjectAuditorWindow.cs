@@ -54,6 +54,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     IssueTable.Column.FileType,
                     IssueTable.Column.Path
                 },
+                onDoubleClick = FocusOnAsset,
                 analyticsEvent = ProjectAuditorAnalytics.UIButton.Assets
             },
             new AnalysisViewDescriptor
@@ -74,6 +75,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     IssueTable.Column.Filename,
                     IssueTable.Column.Assembly
                 },
+                onDoubleClick = OpenTextFile,
                 analyticsEvent = ProjectAuditorAnalytics.UIButton.ApiCalls
             },
             new AnalysisViewDescriptor
@@ -91,6 +93,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                     IssueTable.Column.Description,
                     IssueTable.Column.Area,
                 },
+                onDoubleClick = OpenProjectSettings,
                 analyticsEvent = ProjectAuditorAnalytics.UIButton.ProjectSettings
             }
         };
@@ -190,17 +193,8 @@ namespace Unity.ProjectAuditor.Editor.UI
             var dependencies = issue.dependencies;
             if (dependencies != null)
             {
-                var caller = (CallTreeNode)dependencies;
-                // first search entire call tree if option is enabled, otherwise only search caller name
-                if (m_SearchCallTree)
-                {
-                    if (MatchesSearch(caller))
-                        return true;
-                }
-                else if (MatchesSearch(caller.typeName) || MatchesSearch(caller.methodName))
-                {
+                if (MatchesSearch(dependencies, m_SearchCallTree))
                     return true;
-                }
             }
 
             // no string match
@@ -250,8 +244,8 @@ namespace Unity.ProjectAuditor.Editor.UI
                 m_AnalysisViews.Add(view);
             }
 
-            m_CallTreeView = new DependencyView(new TreeViewState());
-            m_AssetDependencyView = new DependencyView(new TreeViewState());
+            m_CallTreeView = new DependencyView(new TreeViewState(), OpenTextFile);
+            m_AssetDependencyView = new DependencyView(new TreeViewState(), FocusOnAsset);
 
             RefreshDisplay();
         }
@@ -296,17 +290,23 @@ namespace Unity.ProjectAuditor.Editor.UI
                 text.IndexOf(m_SearchText, m_SearchMatchCase ? StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase) >= 0;
         }
 
-        private bool MatchesSearch(CallTreeNode callTreeNode)
+        private bool MatchesSearch(DependencyNode node, bool recursive)
         {
-            if (callTreeNode == null)
+            if (node == null)
                 return false;
-            if (MatchesSearch(callTreeNode.typeName) || MatchesSearch(callTreeNode.methodName))
-                return true;
-            for (int i = 0; i < callTreeNode.GetNumChildren(); i++)
+
+            var callTreeNode = node as CallTreeNode;
+            if (callTreeNode != null)
             {
-                if (MatchesSearch(callTreeNode.GetChild(i) as CallTreeNode))
+                if (MatchesSearch(callTreeNode.typeName) || MatchesSearch(callTreeNode.methodName))
                     return true;
             }
+            if (recursive)
+                for (int i = 0; i < callTreeNode.GetNumChildren(); i++)
+                {
+                    if (MatchesSearch(callTreeNode.GetChild(i), true))
+                        return true;
+                }
 
             return false;
         }
@@ -447,6 +447,15 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         private void DrawIssues()
         {
+            ProblemDescriptor problemDescriptor = null;
+            var selectedItems = m_ActiveIssueTable.GetSelectedItems();
+            var selectedDescriptors = selectedItems.Select(i => i.ProblemDescriptor);
+            var selectedIssues = selectedItems.Select(i => i.ProjectIssue);
+            // find out if all descriptors are the same
+            var firstDescriptor = selectedDescriptors.FirstOrDefault();
+            if (selectedDescriptors.Count() == selectedDescriptors.Count(d => d.id == firstDescriptor.id))
+                problemDescriptor = firstDescriptor;
+
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.BeginVertical();
 
@@ -457,26 +466,12 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (m_ActiveAnalysisView.desc.showRightPanels)
             {
                 EditorGUILayout.BeginVertical(GUILayout.Width(LayoutSize.FoldoutWidth));
-                DrawFoldouts();
+                DrawFoldouts(problemDescriptor);
                 EditorGUILayout.EndVertical();
             }
 
             EditorGUILayout.EndHorizontal();
-        }
 
-        private void DrawFoldouts()
-        {
-            ProblemDescriptor problemDescriptor = null;
-            var selectedItems = m_ActiveIssueTable.GetSelectedItems();
-            var selectedDescriptors = selectedItems.Select(i => i.ProblemDescriptor);
-            var selectedIssues = selectedItems.Select(i => i.ProjectIssue);
-            // find out if all descriptors are the same
-            var firstDescriptor = selectedDescriptors.FirstOrDefault();
-            if (selectedDescriptors.Count() == selectedDescriptors.Count(d => d.id == firstDescriptor.id))
-                problemDescriptor = firstDescriptor;
-
-            DrawDetailsFoldout(problemDescriptor);
-            DrawRecommendationFoldout(problemDescriptor);
             if (m_ActiveAnalysisView.desc.showDependencyView)
             {
                 ProjectIssue issue = null;
@@ -501,6 +496,12 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 DrawCallHierarchy(issue, callTree);
             }
+        }
+
+        private void DrawFoldouts(ProblemDescriptor problemDescriptor)
+        {
+            DrawDetailsFoldout(problemDescriptor);
+            DrawRecommendationFoldout(problemDescriptor);
         }
 
         private bool BoldFoldout(bool toggle, GUIContent content)
@@ -554,14 +555,14 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         private void DrawCallHierarchy(ProjectIssue issue, DependencyNode callTree)
         {
-            EditorGUILayout.BeginVertical(GUI.skin.box, GUILayout.Width(LayoutSize.FoldoutWidth));
+            EditorGUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(LayoutSize.CallTreeHeight));
 
             m_Preferences.callTree = BoldFoldout(m_Preferences.callTree, Styles.CallTreeFoldout);
             if (m_Preferences.callTree)
             {
                 if (callTree != null)
                 {
-                    var r = EditorGUILayout.GetControlRect(GUILayout.Height(400));
+                    var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
 
                     m_CallTreeView.OnGUI(r);
                 }
@@ -1045,6 +1046,34 @@ namespace Unity.ProjectAuditor.Editor.UI
             }
         }
 
+        static void OpenTextFile(Location location)
+        {
+            var obj = AssetDatabase.LoadAssetAtPath<TextAsset>(location.Path);
+            if (obj != null)
+            {
+                // open text file in the text editor
+                AssetDatabase.OpenAsset(obj, location.Line);
+            }
+        }
+
+        static void OpenProjectSettings(Location location)
+        {
+#if UNITY_2018_3_OR_NEWER
+            var window = SettingsService.OpenProjectSettings(location.Path);
+            window.Repaint();
+#endif
+        }
+
+        static void FocusOnAsset(Location location)
+        {
+            // focus asset in the project window
+            var obj = AssetDatabase.LoadMainAssetAtPath(location.Path);
+            if (obj != null)
+            {
+                ProjectWindowUtil.ShowCreatedAsset(obj);
+            }
+        }
+
 #if UNITY_2018_1_OR_NEWER
         [MenuItem("Window/Analysis/Project Auditor")]
 #else
@@ -1068,6 +1097,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             public static readonly int FilterOptionsLeftLabelWidth = 100;
             public static readonly int FilterOptionsEnumWidth = 50;
             public static readonly int ModeTabWidth = 300;
+            public static readonly int CallTreeHeight = 200;
         }
 
         private static class Styles

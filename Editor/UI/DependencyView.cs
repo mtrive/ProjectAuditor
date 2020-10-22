@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor.IMGUI.Controls;
 
 namespace Unity.ProjectAuditor.Editor.UI
@@ -6,11 +8,13 @@ namespace Unity.ProjectAuditor.Editor.UI
     internal class DependencyView : TreeView
     {
         private readonly Dictionary<int, DependencyNode> m_NodeDictionary = new Dictionary<int, DependencyNode>();
+        private readonly Action<Location> m_OnDoubleClick;
         private DependencyNode m_Root;
 
-        public DependencyView(TreeViewState treeViewState)
+        public DependencyView(TreeViewState treeViewState, Action<Location> onDoubleClick)
             : base(treeViewState)
         {
+            m_OnDoubleClick = onDoubleClick;
             Reload();
         }
 
@@ -60,7 +64,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             {
                 var node = m_NodeDictionary[id];
                 if (node.location != null)
-                    node.location.Open();
+                    m_OnDoubleClick(node.location);
             }
         }
     }
