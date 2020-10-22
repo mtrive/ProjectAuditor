@@ -19,6 +19,13 @@ namespace Unity.ProjectAuditor.Editor
         public AssemblyCompilationException() {}
     }
 
+    public class AssetDependencyNode : Unity.ProjectAuditor.Editor.DependencyNode
+    {
+        public AssetDependencyNode() {}
+        public virtual string GetPrettyName();
+        public virtual bool IsPerfCritical();
+    }
+
     public abstract class DependencyNode
     {
         public Unity.ProjectAuditor.Editor.Utils.Location location;

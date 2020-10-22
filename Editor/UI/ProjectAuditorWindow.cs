@@ -46,7 +46,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 descriptionWithIcon = true,
                 showAssemblySelection = false,
                 showCritical = false,
-                showDependencyView = false,
+                showDependencyView = true,
                 showRightPanels = true,
                 columnDescriptors = new[]
                 {
@@ -107,10 +107,6 @@ namespace Unity.ProjectAuditor.Editor.UI
         private readonly List<AnalysisView> m_AnalysisViews = new List<AnalysisView>();
         private TreeViewSelection m_AreaSelection;
         private TreeViewSelection m_AssemblySelection;
-        private DependencyView m_CallTreeView;
-        private DependencyNode m_CallTreeRoot;
-        private DependencyView m_AssetDependencyView;
-        private DependencyNode m_AssetDependencyRoot;
         private bool m_SearchCallTree = false;
         private bool m_SearchMatchCase = false;
 
@@ -243,9 +239,6 @@ namespace Unity.ProjectAuditor.Editor.UI
 
                 m_AnalysisViews.Add(view);
             }
-
-            m_CallTreeView = new DependencyView(new TreeViewState(), OpenTextFile);
-            m_AssetDependencyView = new DependencyView(new TreeViewState(), FocusOnAsset);
 
             RefreshDisplay();
         }
@@ -480,21 +473,21 @@ namespace Unity.ProjectAuditor.Editor.UI
                     issue = selectedIssues.First();
                 }
 
-                DependencyNode callTree = null;
+                DependencyNode dependencies = null;
                 if (issue != null && issue.dependencies != null)
                 {
-                    // get caller sub-tree
-                    callTree = issue.dependencies.GetChild();
+                    // skip self
+                    //if (issue.dependencies.HasChildren())
+
+                    if (issue.dependencies as CallTreeNode != null)
+                        dependencies =  issue.dependencies.GetChild();
+                    else
+                        dependencies = issue.dependencies;
                 }
 
-                if (m_CallTreeRoot != callTree)
-                {
-                    m_CallTreeView.SetRoot(callTree);
-                    m_CallTreeView.Reload();
-                    m_CallTreeRoot = callTree;
-                }
+                m_ActiveAnalysisView.m_DependencyView.SetRoot(dependencies);
 
-                DrawCallHierarchy(issue, callTree);
+                DrawCallHierarchy(issue, dependencies);
             }
         }
 
@@ -553,18 +546,18 @@ namespace Unity.ProjectAuditor.Editor.UI
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawCallHierarchy(ProjectIssue issue, DependencyNode callTree)
+        private void DrawCallHierarchy(ProjectIssue issue, DependencyNode root)
         {
-            EditorGUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(LayoutSize.CallTreeHeight));
+            EditorGUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(LayoutSize.DependencyViewHeight));
 
-            m_Preferences.callTree = BoldFoldout(m_Preferences.callTree, Styles.CallTreeFoldout);
-            if (m_Preferences.callTree)
+            m_Preferences.dependencies = BoldFoldout(m_Preferences.dependencies, Styles.CallTreeFoldout);
+            if (m_Preferences.dependencies)
             {
-                if (callTree != null)
+                if (root != null)
                 {
                     var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
 
-                    m_CallTreeView.OnGUI(r);
+                    m_ActiveAnalysisView.m_DependencyView.OnGUI(r);
                 }
                 else if (issue != null)
                 {
@@ -1097,7 +1090,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             public static readonly int FilterOptionsLeftLabelWidth = 100;
             public static readonly int FilterOptionsEnumWidth = 50;
             public static readonly int ModeTabWidth = 300;
-            public static readonly int CallTreeHeight = 200;
+            public static readonly int DependencyViewHeight = 200;
         }
 
         private static class Styles

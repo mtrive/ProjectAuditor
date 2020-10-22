@@ -38,7 +38,12 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         public void SetRoot(DependencyNode root)
         {
-            m_Root = root;
+            if (m_Root != root)
+            {
+                m_Root = root;
+
+                Reload();
+            }
         }
 
         private void AddNode(List<TreeViewItem> items, DependencyNode node, int depth)

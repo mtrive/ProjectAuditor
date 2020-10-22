@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Unity.ProjectAuditor.Editor.Utils;
 using UnityEditor;
+using UnityEngine;
 
 namespace Unity.ProjectAuditor.Editor.Auditors
 {
@@ -51,36 +52,67 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             var allResources = allAssetPaths.Where(path => path.IndexOf("/resources/", StringComparison.OrdinalIgnoreCase) >= 0);
             var allPlayerResources = allResources.Where(path => path.IndexOf("/editor/", StringComparison.OrdinalIgnoreCase) == -1);
 
-            var resourceAssetPathsHashSet = new HashSet<string>();
-            foreach (var assetPath in allPlayerResources)
+            var assetPathsDict = new Dictionary<string, DependencyNode>();
+            foreach (var assetPath in allPlayerResources.Where(ass => ass.Contains("ModularTrack")))
             {
                 if ((File.GetAttributes(assetPath) & FileAttributes.Directory) == FileAttributes.Directory)
                     continue;
 
-                // get all dependencies, including 'assetPath'
+                var root = AddResourceAsset(assetPath, assetPathsDict, onIssueFound, null);
                 var dependencies = AssetDatabase.GetDependencies(assetPath, true);
-                foreach (var dep in dependencies)
+                foreach (var depAssetPath in dependencies)
                 {
-                    // skip C# scripts
-                    if (Path.GetExtension(dep).Equals(".cs"))
+                    // skip self
+                    if (depAssetPath.Equals(assetPath))
                         continue;
 
-                    resourceAssetPathsHashSet.Add(dep);
+                    root = AddResourceAsset(depAssetPath, assetPathsDict, onIssueFound, root);
                 }
             }
+        }
 
-            foreach (var assetPath in resourceAssetPathsHashSet)
+        private static DependencyNode AddResourceAsset(
+            string assetPath, Dictionary<string, DependencyNode> assetPathsDict, Action<ProjectIssue> onIssueFound, DependencyNode parent)
+        {
+            // skip C# scripts
+            if (Path.GetExtension(assetPath).Equals(".cs"))
+                return parent;
+
+            if (assetPathsDict.ContainsKey(assetPath))
             {
-                var location = new Location(assetPath);
-                onIssueFound(new ProjectIssue
-                    (
-                        s_Descriptor,
-                        Path.GetFileNameWithoutExtension(location.Path),
-                        IssueCategory.Assets,
-                        location
-                    )
-                );
+                if (parent == null)
+                    return assetPathsDict[assetPath];
+                parent.AddChild(assetPathsDict[assetPath]);
+                return parent;
             }
+
+            var location = new Location(assetPath);
+            var dependencyNode = new AssetDependencyNode
+            {
+                location = new Location(assetPath)
+            };
+            if (parent == null)
+                parent = dependencyNode;
+            else
+            {
+                parent.AddChild(dependencyNode);
+            }
+
+            onIssueFound(new ProjectIssue
+                (
+                    s_Descriptor,
+                    Path.GetFileNameWithoutExtension(location.Path),
+                    IssueCategory.Assets,
+                    location
+                )
+                {
+                    dependencies = parent
+                }
+            );
+
+            assetPathsDict.Add(assetPath, dependencyNode);
+
+            return parent;
         }
     }
 }

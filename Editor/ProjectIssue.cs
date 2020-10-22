@@ -124,7 +124,10 @@ namespace Unity.ProjectAuditor.Editor
                 if (!dependencies.HasChildren())
                     return string.Empty;
 
-                return ((CallTreeNode)dependencies.GetChild()).name;
+                var callTree = dependencies.GetChild() as CallTreeNode;
+                if (callTree == null)
+                    return string.Empty;
+                return callTree.name;
             }
         }
 
