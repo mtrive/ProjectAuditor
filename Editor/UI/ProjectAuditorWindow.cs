@@ -48,7 +48,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 showCritical = false,
                 showDependencyView = true,
                 showRightPanels = true,
-                dependencyViewGuiContent = new GUIContent("Assets Dependencies", "Assets Dependencies"),
+                dependencyViewGuiContent = new GUIContent("Asset Dependencies", "Asset Dependencies"),
                 columnDescriptors = new[]
                 {
                     IssueTable.Column.Description,
