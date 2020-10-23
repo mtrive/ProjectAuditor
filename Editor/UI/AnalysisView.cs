@@ -19,10 +19,10 @@ namespace Unity.ProjectAuditor.Editor.UI
         public bool showCritical;
         public bool showDependencyView;
         public bool showRightPanels;
+        public GUIContent dependencyViewGuiContent;
         public IssueTable.Column[] columnDescriptors;
         public Action<Location> onDoubleClick;
         public Action<ProjectIssue, DependencyNode> onDrawDependencies;
-        // public Type type;
         public ProjectAuditorAnalytics.UIButton analyticsEvent;
     }
 
@@ -32,10 +32,23 @@ namespace Unity.ProjectAuditor.Editor.UI
         private readonly AnalysisViewDescriptor m_Desc;
         private readonly IIssuesFilter m_Filter;
 
-        //private DependencyView m_DependencyView;
+        private DependencyView m_DependencyView;
+        private IssueTable m_Table;
 
-        public DependencyView m_DependencyView;
-        public IssueTable m_Table;
+        public AnalysisViewDescriptor desc
+        {
+            get { return m_Desc; }
+        }
+
+        public DependencyView dependencyView
+        {
+            get { return m_DependencyView; }
+        }
+
+        public IssueTable table
+        {
+            get { return m_Table; }
+        }
 
         public AnalysisView(AnalysisViewDescriptor desc, ProjectAuditorConfig config, IIssuesFilter filter)
         {
@@ -45,10 +58,6 @@ namespace Unity.ProjectAuditor.Editor.UI
             m_Table = null;
         }
 
-        public AnalysisViewDescriptor desc
-        {
-            get { return m_Desc; }
-        }
 
         public void CreateTable(Preferences prefs)
         {

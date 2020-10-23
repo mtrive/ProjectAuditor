@@ -48,6 +48,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 showCritical = false,
                 showDependencyView = true,
                 showRightPanels = true,
+                dependencyViewGuiContent = new GUIContent("Asset Dependencies", "Assets that the selected one depends on"),
                 columnDescriptors = new[]
                 {
                     IssueTable.Column.Description,
@@ -67,6 +68,7 @@ namespace Unity.ProjectAuditor.Editor.UI
                 showCritical = true,
                 showDependencyView = true,
                 showRightPanels = true,
+                dependencyViewGuiContent = new GUIContent("Inverted Call Hierarchy", "Inverted Call Hierarchy"),
                 columnDescriptors = new[]
                 {
                     IssueTable.Column.Description,
@@ -128,7 +130,7 @@ namespace Unity.ProjectAuditor.Editor.UI
 
         private IssueTable m_ActiveIssueTable
         {
-            get { return m_ActiveAnalysisView.m_Table; }
+            get { return m_ActiveAnalysisView.table; }
         }
 
         public void AddItemsToMenu(GenericMenu menu)
@@ -313,7 +315,7 @@ namespace Unity.ProjectAuditor.Editor.UI
             m_ProjectReport = new ProjectReport();
             foreach (var view in m_AnalysisViews)
             {
-                view.m_Table.Reset();
+                view.table.Reset();
             }
 
             var newIssues = new List<ProjectIssue>();
@@ -485,9 +487,9 @@ namespace Unity.ProjectAuditor.Editor.UI
                         dependencies = issue.dependencies;
                 }
 
-                m_ActiveAnalysisView.m_DependencyView.SetRoot(dependencies);
+                m_ActiveAnalysisView.dependencyView.SetRoot(dependencies);
 
-                DrawCallHierarchy(issue, dependencies);
+                DrawDependencyView(issue, dependencies);
             }
         }
 
@@ -546,18 +548,18 @@ namespace Unity.ProjectAuditor.Editor.UI
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawCallHierarchy(ProjectIssue issue, DependencyNode root)
+        private void DrawDependencyView(ProjectIssue issue, DependencyNode root)
         {
             EditorGUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(LayoutSize.DependencyViewHeight));
 
-            m_Preferences.dependencies = BoldFoldout(m_Preferences.dependencies, Styles.CallTreeFoldout);
+            m_Preferences.dependencies = BoldFoldout(m_Preferences.dependencies, m_ActiveAnalysisView.desc.dependencyViewGuiContent);
             if (m_Preferences.dependencies)
             {
                 if (root != null)
                 {
                     var r = EditorGUILayout.GetControlRect(GUILayout.ExpandHeight(true));
 
-                    m_ActiveAnalysisView.m_DependencyView.OnGUI(r);
+                    m_ActiveAnalysisView.dependencyView.OnGUI(r);
                 }
                 else if (issue != null)
                 {
