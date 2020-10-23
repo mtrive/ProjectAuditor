@@ -59,7 +59,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     continue;
 
                 var root = AddResourceAsset(assetPath, assetPathsDict, onIssueFound, null);
-                var dependencies = AssetDatabase.GetDependencies(assetPath, false);
+                var dependencies = AssetDatabase.GetDependencies(assetPath, true);
                 foreach (var depAssetPath in dependencies)
                 {
                     // skip self
