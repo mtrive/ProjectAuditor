@@ -118,6 +118,7 @@ namespace Unity.ProjectAuditor.Editor
     {
         public string assembly;
         public Unity.ProjectAuditor.Editor.IssueCategory category;
+        public Unity.ProjectAuditor.Editor.DependencyNode dependencies;
         public string description;
         public Unity.ProjectAuditor.Editor.ProblemDescriptor descriptor;
         public Unity.ProjectAuditor.Editor.Utils.Location location;

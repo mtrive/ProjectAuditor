@@ -66,9 +66,7 @@ namespace Unity.ProjectAuditor.Editor.CodeAnalysis
         {
             if (string.IsNullOrEmpty(typeName))
                 return name;
-            // if (string.IsNullOrEmpty(assemblyName) || !withAssembly)
             return string.Format("{0}.{1}", typeName, methodName);
-            //return string.Format("{0}.{1} [{2}]", typeName, methodName, assemblyName);
         }
 
         public override bool IsPerfCritical()
