@@ -4,7 +4,7 @@ namespace Unity.ProjectAuditor.Editor
     {
         public override string GetPrettyName()
         {
-            return location.Filename;
+            return location.Path;
         }
 
         public override bool IsPerfCritical()

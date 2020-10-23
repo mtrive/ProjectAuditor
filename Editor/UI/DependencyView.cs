@@ -26,7 +26,9 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (m_Root != null)
             {
                 m_NodeDictionary.Clear();
-                AddNode(allItems, m_Root, 0);
+
+                var namesStack = new Stack<string>();
+                AddNode(allItems, namesStack, m_Root, 0);
             }
 
             // Utility method that initializes the TreeViewItem.children and -parent for all items.
@@ -46,10 +48,17 @@ namespace Unity.ProjectAuditor.Editor.UI
             }
         }
 
-        private void AddNode(List<TreeViewItem> items, DependencyNode node, int depth)
+        private void AddNode(List<TreeViewItem> items, Stack<string> namesStack, DependencyNode node, int depth)
         {
+            var name = node.GetPrettyName();
+            if (namesStack.Contains(name))
+            {
+                // circular dependency
+                return;
+            }
+
             var id = items.Count;
-            items.Add(new TreeViewItem {id = id, depth = depth, displayName = node.GetPrettyName()}); // TODO add assembly name
+            items.Add(new TreeViewItem {id = id, depth = depth, displayName = name}); // TODO add assembly name
 
             m_NodeDictionary.Add(id, node);
 
@@ -57,10 +66,15 @@ namespace Unity.ProjectAuditor.Editor.UI
             if (!node.HasValidChildren())
                 items.Add(new TreeViewItem {id = id + 1, depth = depth + 1, displayName = "<Serialization Limit>"});
             else
+            {
+                namesStack.Push(name);
                 for (int i = 0; i < node.GetNumChildren(); i++)
                 {
-                    AddNode(items, node.GetChild(i), depth + 1);
+                    AddNode(items, namesStack, node.GetChild(i), depth + 1);
                 }
+
+                namesStack.Pop();
+            }
         }
 
         protected override void DoubleClickedItem(int id)

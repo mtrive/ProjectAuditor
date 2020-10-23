@@ -13,7 +13,7 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         private static readonly ProblemDescriptor s_Descriptor = new ProblemDescriptor
             (
             302000,
-            "Resources folder asset",
+            "Resources folder asset & dependencies",
             Area.BuildSize,
             "The Resources folder is a common source of many problems in Unity projects. Improper use of the Resources folder can bloat the size of a project’s build, lead to uncontrollable excessive memory utilization, and significantly increase application startup times.",
             "Use AssetBundles when possible"
@@ -53,20 +53,20 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             var allPlayerResources = allResources.Where(path => path.IndexOf("/editor/", StringComparison.OrdinalIgnoreCase) == -1);
 
             var assetPathsDict = new Dictionary<string, DependencyNode>();
-            foreach (var assetPath in allPlayerResources.Where(ass => ass.Contains("ModularTrack")))
+            foreach (var assetPath in allPlayerResources)
             {
                 if ((File.GetAttributes(assetPath) & FileAttributes.Directory) == FileAttributes.Directory)
                     continue;
 
                 var root = AddResourceAsset(assetPath, assetPathsDict, onIssueFound, null);
-                var dependencies = AssetDatabase.GetDependencies(assetPath, true);
+                var dependencies = AssetDatabase.GetDependencies(assetPath, false);
                 foreach (var depAssetPath in dependencies)
                 {
                     // skip self
                     if (depAssetPath.Equals(assetPath))
                         continue;
 
-                    root = AddResourceAsset(depAssetPath, assetPathsDict, onIssueFound, root);
+                    AddResourceAsset(depAssetPath, assetPathsDict, onIssueFound, root);
                 }
             }
         }
@@ -76,14 +76,14 @@ namespace Unity.ProjectAuditor.Editor.Auditors
         {
             // skip C# scripts
             if (Path.GetExtension(assetPath).Equals(".cs"))
-                return parent;
+                return null;
 
             if (assetPathsDict.ContainsKey(assetPath))
             {
-                if (parent == null)
-                    return assetPathsDict[assetPath];
-                parent.AddChild(assetPathsDict[assetPath]);
-                return parent;
+                var dep = assetPathsDict[assetPath];
+                if (parent != null)
+                    dep.AddChild(parent);
+                return dep;
             }
 
             var location = new Location(assetPath);
@@ -91,12 +91,8 @@ namespace Unity.ProjectAuditor.Editor.Auditors
             {
                 location = new Location(assetPath)
             };
-            if (parent == null)
-                parent = dependencyNode;
-            else
-            {
-                parent.AddChild(dependencyNode);
-            }
+            if (parent != null)
+                dependencyNode.AddChild(parent);
 
             onIssueFound(new ProjectIssue
                 (
@@ -106,13 +102,13 @@ namespace Unity.ProjectAuditor.Editor.Auditors
                     location
                 )
                 {
-                    dependencies = parent
+                    dependencies = dependencyNode
                 }
             );
 
             assetPathsDict.Add(assetPath, dependencyNode);
 
-            return parent;
+            return dependencyNode;
         }
     }
 }

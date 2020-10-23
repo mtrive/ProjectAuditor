@@ -58,7 +58,6 @@ namespace Unity.ProjectAuditor.Editor.UI
             m_Table = null;
         }
 
-
         public void CreateTable(Preferences prefs)
         {
             if (m_Table != null)
@@ -108,10 +107,6 @@ namespace Unity.ProjectAuditor.Editor.UI
             var info = selectedIssues.Length + " / " + m_Table.GetNumMatchingIssues() + " issues";
 
             EditorGUILayout.LabelField(info, GUILayout.ExpandWidth(true), GUILayout.Width(200));
-        }
-
-        public void OnDependencyViewGUI()
-        {
         }
 
         struct ColumnStyle
