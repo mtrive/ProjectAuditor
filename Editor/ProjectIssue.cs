@@ -83,12 +83,12 @@ namespace Unity.ProjectAuditor.Editor
         public ProjectIssue(ProblemDescriptor descriptor,
                             string description,
                             IssueCategory category,
-                            CallTreeNode callTreeNode)
+                            CallTreeNode dependenciesNode)
         {
             this.descriptor = descriptor;
             this.description = description;
             this.category = category;
-            dependencies = callTreeNode;
+            dependencies = dependenciesNode;
         }
 
         public string filename
