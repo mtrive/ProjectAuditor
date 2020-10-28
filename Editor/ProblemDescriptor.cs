@@ -20,6 +20,7 @@ namespace Unity.ProjectAuditor.Editor
         public string method;
         public string value;
         public bool critical;
+        public string[] platforms;
         public string problem;
         public string solution;
 

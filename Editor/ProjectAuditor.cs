@@ -120,27 +120,39 @@ namespace Unity.ProjectAuditor.Editor
         {
             var stopwatch = Stopwatch.StartNew();
 
+            var activeBuildTarget = EditorUserBuildSettings.activeBuildTarget.ToString();
             var numAuditors = m_Auditors.Count;
             foreach (var auditor in m_Auditors)
             {
                 var startTime = stopwatch.ElapsedMilliseconds;
-                auditor.Audit(onIssueFound, () =>
+                auditor.Audit((issue) =>
                 {
-                    if (config.LogTimingsInfo) Debug.Log(auditor.GetType().Name + " took: " + (stopwatch.ElapsedMilliseconds - startTime) / 1000.0f + " seconds.");
-
-                    onUpdate(false);
-
-                    numAuditors--;
-                    // check if all auditors completed
-                    if (numAuditors == 0)
+                    var validIssueOnActiveTarget = true;
+                    if (issue.descriptor.platforms != null)
                     {
-                        stopwatch.Stop();
-                        if (config.LogTimingsInfo)
-                            Debug.Log("Project Auditor took: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
-
-                        onUpdate(true);
+                        validIssueOnActiveTarget = issue.descriptor.platforms.Contains(activeBuildTarget, StringComparer.InvariantCultureIgnoreCase);
                     }
-                }, progressBar);
+
+                    if (validIssueOnActiveTarget)
+                        onIssueFound(issue);
+                }
+                    , () =>
+                    {
+                        if (config.LogTimingsInfo) Debug.Log(auditor.GetType().Name + " took: " + (stopwatch.ElapsedMilliseconds - startTime) / 1000.0f + " seconds.");
+
+                        onUpdate(false);
+
+                        numAuditors--;
+                        // check if all auditors completed
+                        if (numAuditors == 0)
+                        {
+                            stopwatch.Stop();
+                            if (config.LogTimingsInfo)
+                                Debug.Log("Project Auditor took: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
+
+                            onUpdate(true);
+                        }
+                    }, progressBar);
             }
             Debug.Log("Project Auditor time to interactive: " + stopwatch.ElapsedMilliseconds / 1000.0f + " seconds.");
         }
