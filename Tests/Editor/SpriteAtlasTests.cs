@@ -29,10 +29,15 @@ namespace Unity.ProjectAuditor.EditorTests
         private TestAsset m_BlueSquareSprite;
         private TestAsset m_EmptySquareSprite;
 
+        private SpritePackerMode mode;
+
         [OneTimeSetUp]
         public void SetUp()
         {
 #if UNITY_2020_1_OR_NEWER
+            mode = EditorSettings.spritePackerMode;
+            EditorSettings.spritePackerMode = SpritePackerMode.SpriteAtlasV2;
+
             //Full Sprite Atlas Generation
             var fullSpriteAtlasAsset = new SpriteAtlasAsset();
             fullSpriteAtlasAsset.name = k_SpriteAtlasNameFull;
@@ -137,5 +142,11 @@ namespace Unity.ProjectAuditor.EditorTests
 
             m_EmptySquareSprite = new TestAsset(k_EmptySquareSprite + ".png", emptySquareTexture.EncodeToPNG());
         }
+        [TearDown]
+        public void TearDown()
+        {
+            EditorSettings.spritePackerMode = mode ;
+        }
+
     }
 }
